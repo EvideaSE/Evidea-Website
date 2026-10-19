@@ -1,0 +1,1693 @@
+<!doctype html>
+<html lang="sv" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evidea — Synliggör forskning. För fler.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@500;600&family=Literata:ital,opsz,wght@0,7..72,300..800;1,7..72,300..800&display=swap">
+
+<style id="evidea-brand-system">
+/* ================================================================
+   EVIDEA OFFICIAL BRAND TOKENS & DERIVED SYSTEM (from brand.css)
+   ================================================================ */
+:root {
+  /* Color: light-dark(light value, dark value) */
+  --color-primary: light-dark(#0F2F4F, #A9D3F0);   /* Primär · Havsblå */
+  --color-secondary: light-dark(#0FA39A, #22C1B3); /* Sekundär · Tealgrön */
+  --color-accent: light-dark(#F08A24, #FF9A31);    /* Accent · Varm orange */
+  --color-ink: light-dark(#101214, #E9EEF2);       /* Text */
+  --color-paper: light-dark(#FBF7EF, #0E141A);     /* Papper */
+
+  /* Status */
+  --color-error: light-dark(#D64545, #F07A72);
+  --color-warning: light-dark(#E8A72B, #F2C063);
+  --color-success: light-dark(#119A6E, #4FD1A0);
+  --color-info: light-dark(#2D7FF9, #6FA8FF);
+  --color-sky: light-dark(#A9D3F0, #1E3A55);       /* Ljusblå */
+  --color-sand: light-dark(#E8DFC9, #2A2823);      /* Sand */
+
+  /* Typefaces */
+  --font-heading: "Literata", Georgia, serif;
+  --font-body: "Literata", Georgia, serif;
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Type scale: base × scale^n */
+  --text-base: clamp(1rem, 0.9583rem + 0.2083vw, 1.125rem);
+  --scale: 1.333;
+  --leading: 1.5;
+
+  /* Interactive labels: nav, buttons, toggles */
+  --ui-weight: 500;
+  --ui-case: uppercase;
+  --ui-tracking: 0.06em;
+
+  /* Shape and space */
+  --radius: 0.5rem;
+  --space: 1rem;
+
+  /* Layout grid */
+  --page: 72rem;
+  --columns: 12;
+  --text-span: 8;
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration: 240ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Icons */
+  --icon-size: 24px;
+  --icon-stroke: 1.5px;
+  --icon-linecap: round;
+  --icon-linejoin: round;
+}
+
+@media (max-width: 64rem) { :root { --columns: 8; --text-span: 6; } }
+@media (max-width: 40rem) { :root { --columns: 4; --text-span: 4; } }
+@media (prefers-reduced-motion: reduce) { :root { --duration-fast: 0ms; --duration: 0ms; } }
+
+:root {
+  --ink-oklch:       oklch(from var(--color-ink) l c h);
+  --paper-oklch:     oklch(from var(--color-paper) l c h);
+  --color-muted:     color-mix(in oklch, var(--ink-oklch) 68%, var(--paper-oklch));
+  --color-line:      color-mix(in oklch, var(--ink-oklch) 16%, var(--paper-oklch));
+  --color-wash:      color-mix(in oklch, var(--ink-oklch) 5%,  var(--paper-oklch));
+  --color-highlight: color-mix(in oklch, var(--color-secondary) 35%, var(--color-paper));
+  --color-primary-strong: color-mix(in oklch, var(--color-primary) 80%, var(--color-ink));
+  --color-surface-glass: color-mix(in oklch, var(--color-paper) 88%, transparent);
+
+  --text-sm: calc(var(--text-base) / var(--scale));
+  --text-lg: calc(var(--text-base) * var(--scale));
+  --text-h3: calc(var(--text-base) * pow(var(--scale), 2));
+  --text-h2: calc(var(--text-base) * pow(var(--scale), 3));
+  --text-h1: calc(var(--text-base) * pow(var(--scale), 4));
+
+  --space-2xs: calc(var(--space) * 0.25);
+  --space-xs:  calc(var(--space) * 0.5);
+  --space-s:   calc(var(--space) * 0.75);
+  --space-m:   var(--space);
+  --space-l:   calc(var(--space) * 1.5);
+  --space-xl:  calc(var(--space) * 2);
+  --space-2xl: calc(var(--space) * 3);
+  --space-3xl: calc(var(--space) * 4);
+
+  --radius-sm: calc(var(--radius) / 2);
+  --gutter:    clamp(var(--space-m), 4vw, var(--space-2xl));
+}
+
+:root { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"]  { color-scheme: dark; }
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; accent-color: var(--color-primary); }
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading);
+  overflow-x: hidden;
+  transition: background-color var(--duration) var(--ease), color var(--duration) var(--ease);
+}
+
+/* ================================================================
+   BRAND TYPOGRAPHY & OFFICIAL COMPONENTS
+   ================================================================ */
+h1, h2, h3 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.15;
+  text-wrap: balance;
+  margin-block: 0;
+  color: var(--color-primary);
+}
+h1 { font-size: clamp(2.1rem, 3.6vw, var(--text-h1)); letter-spacing: -0.015em; }
+h2 { font-size: clamp(1.75rem, 2.8vw, var(--text-h2)); letter-spacing: -0.01em; }
+h3 { font-size: var(--text-h3); }
+p { margin-block: 0; text-wrap: pretty; }
+.ingress { font-size: var(--text-lg); line-height: 1.5; color: var(--color-ink); }
+
+/* Interactive labels: IBM Plex Sans, weight 500, uppercase, tracking 0.06em */
+nav a, .button, button, .chip {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: var(--ui-weight);
+  letter-spacing: var(--ui-tracking);
+  text-transform: var(--ui-case);
+}
+
+/* Buttons */
+.button, button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: 0.7em 1.2em;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: var(--color-paper);
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease),
+    translate var(--duration-fast) var(--ease);
+}
+:is(.button, button):hover:not(:disabled) {
+  border-color: var(--color-primary-strong);
+  background: var(--color-primary-strong);
+}
+:is(.button, button):active:not(:disabled) { translate: 0 1px; }
+
+:is(.button, button).secondary {
+  background: transparent;
+  color: var(--color-primary);
+}
+:is(.button, button).secondary:hover:not(:disabled),
+:is(.button, button).secondary[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  background: color-mix(in oklch, var(--color-primary) 14%, var(--color-paper));
+}
+
+:is(.button, button).quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-primary);
+  padding: 0.55em 0.85em;
+}
+:is(.button, button).quiet:hover:not(:disabled),
+:is(.button, button).quiet[aria-pressed="true"] {
+  background: color-mix(in oklch, var(--color-primary) 12%, var(--color-paper));
+}
+
+/* Överrubrik (.eyebrow): IBM Plex Mono, uppercase, 0.06em tracking, punto separator */
+.eyebrow {
+  margin: 0;
+  font: 500 var(--text-sm)/1.3 var(--font-mono);
+  letter-spacing: var(--ui-tracking);
+  text-transform: uppercase;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.eyebrow::before {
+  content: "";
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-secondary);
+}
+
+/* Evidensmärke (.evidence-badge): IBM Plex Mono, uppercase, thin Secondary border, no fill */
+.evidence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: var(--space-2xs) var(--space-xs);
+  border: 1px solid var(--color-secondary);
+  border-radius: var(--radius-sm);
+  font: 500 0.78rem/1 var(--font-mono);
+  letter-spacing: var(--ui-tracking);
+  text-transform: uppercase;
+  color: var(--color-ink);
+  background: transparent;
+}
+
+/* Metadatapanel (.meta): IBM Plex Mono key-value list with thin dividers */
+.meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  margin: 0;
+  font: 400 0.82rem/1.45 var(--font-mono);
+}
+.meta dt, .meta dd {
+  margin: 0;
+  padding-block: 0.45rem;
+  border-block-start: 1px solid var(--color-line);
+}
+.meta dt {
+  padding-inline-end: var(--space-m);
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.meta dd {
+  color: var(--color-ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Kunskapsgrafens nod & legend (.graph-legend) */
+.node-study    { --node: #0F2F4F; fill: var(--node); }
+:root[data-theme="dark"] .node-study { --node: #A9D3F0; }
+.node-topic    { --node: #0FA39A; fill: var(--node); }
+:root[data-theme="dark"] .node-topic { --node: #22C1B3; }
+.node-region   { --node: #E8DFC9; fill: var(--node); }
+.node-material { --node: #101214; fill: var(--node); }
+:root[data-theme="dark"] .node-material { --node: #E9EEF2; }
+
+.graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-m);
+  margin: 0;
+  padding: var(--space-xs) 0 0;
+  list-style: none;
+  font: 400 0.8rem/1.4 var(--font-mono);
+  color: var(--color-muted);
+}
+.graph-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.graph-legend li::before {
+  content: "";
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  border-radius: 50%;
+  background: var(--node);
+}
+.graph-legend .node-region::before {
+  box-shadow: inset 0 0 0 1.5px var(--color-muted);
+}
+
+/* Lucide-style Line Icons: 24px, 1.5px stroke, round caps/joins */
+.icon {
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--icon-stroke);
+  stroke-linecap: var(--icon-linecap);
+  stroke-linejoin: var(--icon-linejoin);
+  flex-shrink: 0;
+}
+.icon-sm {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+/* ================================================================
+   FULL-SCREEN FIXED ANIMATED SOFT-RELIEF SVG STAGE
+   ================================================================ */
+#canvas-stage {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#relief-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Interactive Constellation Layer in Act III */
+#constellation-layer {
+  pointer-events: auto;
+  transition: opacity 480ms var(--ease);
+}
+.constellation-node {
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease);
+}
+.constellation-node .node-circle {
+  stroke: var(--color-paper);
+  stroke-width: 3px;
+  transition: r var(--duration) var(--ease), fill var(--duration) var(--ease);
+}
+.constellation-node .node-selection-ring {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2px;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease), r var(--duration) var(--ease);
+}
+.constellation-node.is-selected .node-selection-ring,
+.constellation-node:hover .node-selection-ring {
+  opacity: 1;
+}
+.constellation-node .node-label {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  fill: #E9EEF2;
+  paint-order: stroke;
+  stroke: rgba(14, 20, 26, 0.85);
+  stroke-width: 3px;
+  pointer-events: none;
+}
+.constellation-edge {
+  stroke: rgba(169, 211, 240, 0.32);
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+  transition: stroke var(--duration) var(--ease), stroke-width var(--duration) var(--ease);
+}
+.constellation-edge.is-highlighted {
+  stroke: #22C1B3;
+  stroke-width: 2.5px;
+}
+
+/* Paper Grain Overlay */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.28;
+  mix-blend-mode: multiply;
+}
+:root[data-theme="dark"] .grain-overlay {
+  opacity: 0.18;
+  mix-blend-mode: soft-light;
+}
+
+/* ================================================================
+   HEADER & FOREGROUND NARRATIVE LAYOUT (72rem, 12-col Grid)
+   ================================================================ */
+.site-header-wrap {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 20;
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-block-end: 1px solid var(--color-line);
+  transition: opacity var(--duration) var(--ease), transform var(--duration) var(--ease);
+}
+body.pure-canvas .site-header-wrap,
+body.pure-canvas main,
+body.pure-canvas .site-footer-wrap {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-s) var(--space-l);
+  max-inline-size: var(--page);
+  margin-inline: auto;
+  padding: 0.75rem var(--gutter);
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--color-primary);
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-decoration: none;
+  padding-block: 0.2rem; /* Respect logo clearspace rule */
+}
+.logo-tagline {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  border-inline-start: 1px solid var(--color-line);
+  padding-inline-start: 0.65rem;
+}
+@media (max-width: 48rem) { .logo-tagline { display: none; } }
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+/* Main 12-Column Narrative Container */
+main {
+  position: relative;
+  z-index: 10;
+  max-inline-size: var(--page);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  pointer-events: none; /* Let clicks pass through to constellation where empty */
+}
+
+.act-section {
+  min-block-size: 100vh;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  align-items: center;
+  gap: var(--space-xl) var(--space-m);
+  padding-block: 7rem 6rem;
+}
+
+/* Surface Cards following Evidea --radius: 0.5rem & --color-paper / --color-sand */
+.surface-card {
+  pointer-events: auto;
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  padding: clamp(1.5rem, 3vw, 2.25rem);
+  box-shadow: 0 18px 42px -16px rgba(15, 47, 79, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+  transition: background-color var(--duration) var(--ease), border-color var(--duration) var(--ease);
+}
+
+.span-7 { grid-column: span 7; }
+.span-5 { grid-column: span 5; }
+.span-6 { grid-column: span 6; }
+.span-8 { grid-column: span 8; }
+@media (max-width: 64rem) {
+  .span-7, .span-5, .span-6, .span-8 { grid-column: 1 / -1; }
+}
+
+/* Sand Tags & Callouts */
+.sand-box {
+  background: color-mix(in oklch, var(--color-sand) 65%, var(--color-paper));
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  padding: var(--space-m);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+/* Rounded Hexagonal Illustration Badges (Mjuk relief i avrundad hexagon) */
+.hex-gallery {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-m);
+}
+@media (max-width: 36rem) { .hex-gallery { grid-template-columns: 1fr; } }
+
+.hex-card {
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  padding: var(--space-m);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-xs);
+  transition: border-color var(--duration-fast) var(--ease), translate var(--duration-fast) var(--ease);
+}
+.hex-card:hover {
+  border-color: var(--color-secondary);
+  translate: 0 -3px;
+}
+.hex-svg {
+  width: 100%;
+  max-width: 175px;
+  height: auto;
+  overflow: visible;
+}
+.hex-card h3 {
+  font-size: 1.05rem;
+  color: var(--color-primary);
+}
+.hex-card p {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+/* Metaphor Switcher Pills in Act II */
+.metaphor-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-xs);
+}
+@media (max-width: 42rem) { .metaphor-tabs { grid-template-columns: 1fr; } }
+
+.metaphor-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.75rem 0.9rem;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius);
+  background: color-mix(in oklch, var(--color-paper) 75%, transparent);
+  color: var(--color-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease);
+}
+.metaphor-btn:hover {
+  border-color: var(--color-secondary);
+}
+.metaphor-btn[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  background: color-mix(in oklch, var(--color-secondary) 16%, var(--color-paper));
+}
+.metaphor-btn .mono-code {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--color-secondary);
+}
+
+/* Bottom Interactive Control Dock */
+.control-dock {
+  position: fixed;
+  inset-block-end: var(--space-m);
+  inset-inline: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  padding-inline: var(--gutter);
+  pointer-events: none;
+}
+.control-dock-inner {
+  pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-m);
+  padding: 0.55rem 1rem;
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(15, 47, 79, 0.18);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+.dock-group {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.dock-divider {
+  inline-size: 1px;
+  block-size: 1.4rem;
+  background: var(--color-line);
+}
+@media (max-width: 48rem) { .dock-divider { display: none; } }
+
+.dock-slider {
+  inline-size: 5.5rem;
+  accent-color: var(--color-secondary);
+  cursor: pointer;
+}
+
+/* Official Footer */
+.site-footer-wrap {
+  position: relative;
+  z-index: 10;
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(14px);
+  border-block-start: 1px solid var(--color-line);
+  margin-block-start: var(--space-2xl);
+  padding-block-end: 4.5rem;
+}
+.site-footer {
+  max-inline-size: var(--page);
+  margin-inline: auto;
+  padding: var(--space-xl) var(--gutter);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-m);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+     FIXED FULL-SCREEN PROCEDURAL SOFT-RELIEF SVG STAGE
+     ================================================================ -->
+<div id="canvas-stage" aria-hidden="false">
+  <svg id="relief-svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <!-- Dynamic Sky Gradient -->
+      <linearGradient id="sky-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop id="sky-stop-0" offset="0%" stop-color="#A9D3F0" />
+        <stop id="sky-stop-1" offset="52%" stop-color="#E8DFC9" />
+        <stop id="sky-stop-2" offset="100%" stop-color="#FBF7EF" />
+      </linearGradient>
+
+      <!-- Sun / Moon Core & Halo Gradients -->
+      <radialGradient id="sun-glow" cx="50%" cy="50%" r="50%">
+        <stop id="sun-stop-0" offset="0%" stop-color="#F08A24" stop-opacity="0.95" />
+        <stop id="sun-stop-1" offset="65%" stop-color="#E8A72B" stop-opacity="0.45" />
+        <stop id="sun-stop-2" offset="100%" stop-color="#FBF7EF" stop-opacity="0" />
+      </radialGradient>
+
+      <!-- Soft Relief Elevation Shadow Filter -->
+      <filter id="soft-relief-shadow" x="-10%" y="-20%" width="120%" height="140%">
+        <feDropShadow dx="0" dy="-6" stdDeviation="10" flood-color="#0F2F4F" flood-opacity="0.12" />
+      </filter>
+
+      <!-- Sunlit Rim Highlight Blur -->
+      <filter id="rim-blur" x="-5%" y="-10%" width="110%" height="120%">
+        <feGaussianBlur stdDeviation="2.5" />
+      </filter>
+
+      <!-- 6 Wave Linear Gradients (Brand-aligned Soft Relief) -->
+      <linearGradient id="wave-grad-0" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop id="w0-top" offset="0%" stop-color="#E8DFC9" />
+        <stop id="w0-bot" offset="100%" stop-color="#A9D3F0" />
+      </linearGradient>
+      <linearGradient id="wave-grad-1" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop id="w1-top" offset="0%" stop-color="#A9D3F0" />
+        <stop id="w1-bot" offset="100%" stop-color="#7BC0DC" />
+      </linearGradient>
+      <linearGradient id="wave-grad-2" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop id="w2-top" offset="0%" stop-color="#64B8C9" />
+        <stop id="w2-bot" offset="100%" stop-color="#22C1B3" />
+      </linearGradient>
+      <linearGradient id="wave-grad-3" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop id="w3-top" offset="0%" stop-color="#0FA39A" />
+        <stop id="w3-bot" offset="100%" stop-color="#14748B" />
+      </linearGradient>
+      <linearGradient id="wave-grad-4" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop id="w4-top" offset="0%" stop-color="#185A7A" />
+        <stop id="w4-bot" offset="100%" stop-color="#0F2F4F" />
+      </linearGradient>
+      <linearGradient id="wave-grad-5" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop id="w5-top" offset="0%" stop-color="#0F2F4F" />
+        <stop id="w5-bot" offset="100%" stop-color="#091D33" />
+      </linearGradient>
+    </defs>
+
+    <!-- Sky Backdrop -->
+    <rect width="1440" height="900" fill="url(#sky-grad)" />
+
+    <!-- Celestial Group (Concentric Sun / Moon Halos + Secondary Celestial Orb) -->
+    <g id="celestial-group">
+      <circle id="halo-outer" cx="920" cy="310" r="240" fill="url(#sun-glow)" opacity="0.45" />
+      <circle id="halo-mid"   cx="920" cy="310" r="165" fill="#F08A24" opacity="0.16" />
+      <circle id="halo-inner" cx="920" cy="310" r="112" fill="#F08A24" opacity="0.26" />
+      <circle id="sun-core"   cx="920" cy="310" r="68"  fill="#F08A24" opacity="0.88" />
+      <!-- Signature Small Celestial Dot from Reference Icons -->
+      <circle id="celestial-dot" cx="760" cy="145" r="15" fill="#FBF7EF" opacity="0.75" />
+    </g>
+
+    <!-- Act II Weather / Horizon Metaphor Overlay (Rain / Compass / Sand Drift) -->
+    <g id="weather-layer" opacity="0"></g>
+
+    <!-- Act III Interactive Kunskapsgraf Constellation Layer -->
+    <g id="constellation-layer" opacity="0">
+      <g id="constellation-edges"></g>
+      <g id="constellation-nodes"></g>
+    </g>
+
+    <!-- 6 Procedural Soft-Relief Wave / Dune Layers with Sunlit Rim Highlights -->
+    <g id="waves-group">
+      <g class="wave-layer">
+        <path id="wave-path-0" fill="url(#wave-grad-0)" filter="url(#soft-relief-shadow)" />
+        <path id="wave-rim-0"  fill="none" stroke="#FBF7EF" stroke-width="2.5" opacity="0.55" filter="url(#rim-blur)" />
+      </g>
+      <g class="wave-layer">
+        <path id="wave-path-1" fill="url(#wave-grad-1)" filter="url(#soft-relief-shadow)" />
+        <path id="wave-rim-1"  fill="none" stroke="#FBF7EF" stroke-width="2.2" opacity="0.48" filter="url(#rim-blur)" />
+      </g>
+      <g class="wave-layer">
+        <path id="wave-path-2" fill="url(#wave-grad-2)" filter="url(#soft-relief-shadow)" />
+        <path id="wave-rim-2"  fill="none" stroke="#A9D3F0" stroke-width="2" opacity="0.45" filter="url(#rim-blur)" />
+      </g>
+      <g class="wave-layer">
+        <path id="wave-path-3" fill="url(#wave-grad-3)" filter="url(#soft-relief-shadow)" />
+        <path id="wave-rim-3"  fill="none" stroke="#22C1B3" stroke-width="1.8" opacity="0.4" filter="url(#rim-blur)" />
+      </g>
+      <g class="wave-layer">
+        <path id="wave-path-4" fill="url(#wave-grad-4)" filter="url(#soft-relief-shadow)" />
+        <path id="wave-rim-4"  fill="none" stroke="#A9D3F0" stroke-width="1.5" opacity="0.32" filter="url(#rim-blur)" />
+      </g>
+      <g class="wave-layer">
+        <path id="wave-path-5" fill="url(#wave-grad-5)" filter="url(#soft-relief-shadow)" />
+        <path id="wave-rim-5"  fill="none" stroke="#0FA39A" stroke-width="1.4" opacity="0.28" filter="url(#rim-blur)" />
+      </g>
+    </g>
+  </svg>
+</div>
+
+<!-- Tactile Paper Grain Filter Overlay -->
+<svg class="grain-overlay" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <filter id="paper-grain-filter">
+    <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch" />
+    <feColorMatrix type="saturate" values="0" />
+  </filter>
+  <rect width="100%" height="100%" filter="url(#paper-grain-filter)" />
+</svg>
+
+<!-- ================================================================
+     SITE HEADER (Evidea Logotype + Navigation + Theme & Canvas Toggle)
+     ================================================================ -->
+<header class="site-header-wrap">
+  <div class="site-header">
+    <a href="#act-1" class="logo" aria-label="Evidea Startsida">
+      <!-- Official Node + 'e' Brand Symbol -->
+      <svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
+        <circle cx="20" cy="20" r="16" fill="none" stroke="var(--color-secondary)" stroke-width="2" stroke-dasharray="5 3" />
+        <circle cx="20" cy="4"  r="3.2" fill="var(--color-secondary)" />
+        <circle cx="34" cy="28" r="3.2" fill="var(--color-accent)" />
+        <circle cx="6"  cy="28" r="3.2" fill="var(--color-primary)" />
+        <text x="20" y="25" text-anchor="middle" font-family="Literata, Georgia, serif" font-weight="700" font-size="18" fill="var(--color-primary)">e</text>
+      </svg>
+      <span>Evidea</span>
+      <span class="logo-tagline">Synliggör forskning. För fler.</span>
+    </a>
+
+    <nav class="header-nav" aria-label="Kapitelnavigering">
+      <button type="button" class="quiet" data-jump="0" aria-pressed="true">01 · Gryning</button>
+      <button type="button" class="quiet" data-jump="1" aria-pressed="false">02 · Horisont</button>
+      <button type="button" class="quiet" data-jump="2" aria-pressed="false">03 · Kunskapsgraf</button>
+      <button type="button" class="secondary" id="theme-toggle-btn" title="Växla ljust/mörkt tema">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        <span id="theme-label">Tema</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<!-- ================================================================
+     FOREGROUND NARRATIVE SECTIONS (3 ACTS)
+     ================================================================ -->
+<main id="narrative-main">
+
+  <!-- ACT I: GRYNING (SUNRISE SCENE) -->
+  <section id="act-1" class="act-section" data-act="0">
+    <div class="surface-card span-7">
+      <p class="eyebrow">KAPITEL 01 · GRYNING</p>
+      <h1>Synliggör forskning. För fler.</h1>
+      <p class="ingress">
+        Evidea är början på en ny gryning för alla som söker pålitlig, granskad och tillgänglig kunskap inom hälsa och vård.
+      </p>
+      <p>
+        När du utforskar dina vårdalternativ ska du aldrig behöva tvivla på källornas trovärdighet. Vi sammanför systematiska översikter, kohortstudier och kliniska riktlinjer i ett lugnt, transparent landskap.
+      </p>
+      <div style="display:flex; flex-wrap:wrap; gap:var(--space-xs); align-items:center; padding-top:var(--space-2xs);">
+        <span class="evidence-badge">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          PEER REVIEWED · SYSTEMATISK KARTLÄGGNING
+        </span>
+        <span class="evidence-badge">ÖPPNA KÄLLDATA</span>
+      </div>
+      <div class="buttons" style="padding-top:var(--space-xs);">
+        <a href="#act-2" class="button">
+          Utforska vår horisont
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+        </a>
+        <a href="#act-3" class="button secondary">Öppna kunskapsgrafen</a>
+      </div>
+    </div>
+
+    <!-- Brand Rule: Mjuk relief i en avrundad hexagon där vågorna får gå utanför ramen nedtill -->
+    <div class="hex-gallery span-5">
+      <div class="hex-card">
+        <svg class="hex-svg" viewBox="0 0 200 215" aria-hidden="true">
+          <defs>
+            <clipPath id="hex-clip-1">
+              <path d="M100 8 L178 52 Q190 59 190 73 L190 142 Q190 156 178 163 L100 207 Q88 214 76 207 L22 163 Q10 156 10 142 L10 73 Q10 59 22 52 L76 8 Q88 1 100 8 Z" />
+            </clipPath>
+          </defs>
+          <g clip-path="url(#hex-clip-1)">
+            <rect width="200" height="215" fill="#A9D3F0" opacity="0.45" />
+            <circle cx="136" cy="84" r="34" fill="#F08A24" opacity="0.28" />
+            <circle cx="136" cy="84" r="20" fill="#F08A24" opacity="0.82" />
+            <circle cx="105" cy="42" r="5"  fill="#FBF7EF" />
+            <!-- Calm collaborative silhouettes (per brand rule: lugna och i omsorg/samarbete) -->
+            <circle cx="74" cy="92" r="15" fill="#0F2F4F" />
+            <path d="M46 155 C46 122 102 122 102 155 Z" fill="#0FA39A" />
+            <circle cx="104" cy="112" r="11" fill="#F08A24" opacity="0.85" />
+            <path d="M10 150 Q65 128 115 152 T195 144 L195 215 L10 215 Z" fill="#0FA39A" opacity="0.85" />
+          </g>
+          <!-- Waves overflowing bottom frame per brand rule -->
+          <path d="M18 162 Q95 138 182 162 L152 192 Q100 216 48 192 Z" fill="#0F2F4F" />
+        </svg>
+        <span class="eyebrow" style="font-size:0.7rem;">OMSORG · SAMARBETE</span>
+        <h3>Människan i centrum</h3>
+        <p>Gemensam förståelse utan att lämna någon ensam i besluten.</p>
+      </div>
+
+      <div class="hex-card">
+        <svg class="hex-svg" viewBox="0 0 200 215" aria-hidden="true">
+          <g clip-path="url(#hex-clip-1)">
+            <rect width="200" height="215" fill="#E8DFC9" opacity="0.7" />
+            <circle cx="68" cy="82" r="32" fill="#F08A24" opacity="0.26" />
+            <circle cx="68" cy="82" r="18" fill="#F08A24" opacity="0.82" />
+            <circle cx="92" cy="42" r="5"  fill="#FBF7EF" />
+            <!-- Soft-relief microscope motif -->
+            <path d="M105 56 L124 66 L102 110 L83 100 Z" fill="#FBF7EF" stroke="#0F2F4F" stroke-width="2" />
+            <path d="M114 82 C142 92 142 135 108 142 L74 142" fill="none" stroke="#0F2F4F" stroke-width="9" stroke-linecap="round" />
+            <rect x="64" y="138" width="72" height="12" rx="4" fill="#0F2F4F" />
+            <path d="M10 154 Q75 134 130 156 T195 148 L195 215 L10 215 Z" fill="#0FA39A" />
+          </g>
+          <path d="M20 164 Q102 140 180 164 L150 194 Q100 216 50 194 Z" fill="#0F2F4F" />
+        </svg>
+        <span class="eyebrow" style="font-size:0.7rem;">METODIK · EVIDENS</span>
+        <h3>Granskad vetenskap</h3>
+        <p>Tydlig källkritik, urval och metodik i varje forskningskort.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACT II: HORISONT (3 INTERACTIVE METAPHORS: STORM / OPEN OCEAN / DESERT) -->
+  <section id="act-2" class="act-section" data-act="1">
+    <div class="surface-card span-7">
+      <p class="eyebrow">KAPITEL 02 · UTMANINGEN · NAVIGERING</p>
+      <h2>Aldrig ensam mitt i stormen eller utan land i sikte.</h2>
+      <p class="ingress">
+        Att söka svar om sin egen hälsa kan kännas som att driva på ett stormigt hav, ett öppet världshav utan kompass eller genom en oändlig öken av motstridiga påståenden.
+      </p>
+
+      <!-- Interactive Metaphor Switcher -->
+      <div class="sand-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+          <span style="font-family:var(--font-mono); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--color-primary);">
+            Välj visuell metafor för kapitel 02:
+          </span>
+          <span class="evidence-badge" id="active-metaphor-badge">METAFOR · STORMIGT HAV</span>
+        </div>
+
+        <div class="metaphor-tabs" role="group" aria-label="Välj scenmetafor">
+          <button type="button" class="metaphor-btn" data-metaphor="storm" aria-pressed="true">
+            <span class="mono-code">02.A · HAVSBLÅ &amp; REGN</span>
+            <strong>Stormigt hav</strong>
+            <small style="color:var(--color-muted); text-transform:none; letter-spacing:0;">Höga dyningar, regn och en vägledande fyr.</small>
+          </button>
+          <button type="button" class="metaphor-btn" data-metaphor="ocean" aria-pressed="false">
+            <span class="mono-code">02.B · LJUSBLÅ &amp; TEAL</span>
+            <strong>Öppet hav</strong>
+            <small style="color:var(--color-muted); text-transform:none; letter-spacing:0;">Inget land i sikte, vid horisont och kompassros.</small>
+          </button>
+          <button type="button" class="metaphor-btn" data-metaphor="desert" aria-pressed="false">
+            <span class="mono-code">02.C · SAND &amp; VARM ORANGE</span>
+            <strong>Ökenlandskap</strong>
+            <small style="color:var(--color-muted); text-transform:none; letter-spacing:0;">Mjuka sanddyner i varma sand- och ockratoner.</small>
+          </button>
+        </div>
+
+        <!-- Interactive Turbulence Calming Filter -->
+        <div style="padding-top:var(--space-xs); display:flex; align-items:center; gap:var(--space-m); flex-wrap:wrap;">
+          <label for="calm-slider" style="font-family:var(--font-mono); font-size:0.78rem; text-transform:uppercase; color:var(--color-primary);">
+            Evidea Vägledningsfilter (Lugna turbulensen):
+          </label>
+          <input type="range" id="calm-slider" min="0" max="100" value="20" style="flex:1; min-width:140px; accent-color:var(--color-secondary);">
+          <span id="calm-readout" style="font-family:var(--font-mono); font-size:0.8rem; color:var(--color-secondary);">20% LUGN</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="surface-card span-5">
+      <p class="eyebrow">KÄLLKRITISK METOD · FILTER</p>
+      <h3>Från informationsbrus till klarhet</h3>
+      <p>
+        Evidea strukturerar medicinsk forskning genom transparenta urvalskriterier. Varje källa märks med studietyp, granskningsstatus, urvalsstorlek och geografisk relevans.
+      </p>
+      <dl class="meta">
+        <dt>Primär källa</dt>
+        <dd>Systematiska översikter &amp; RCT</dd>
+        <dt>Transparens</dt>
+        <dd>Öppen redovisning av exkluderade studier</dd>
+        <dt>Stöd</dt>
+        <dd>Kontextuella sammanfattningar på klarspråk</dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ACT III: KUNSKAPSGRAFEN (NIGHT CONSTELLATION & METADATAPANEL) -->
+  <section id="act-3" class="act-section" data-act="2">
+    <div class="surface-card span-5">
+      <p class="eyebrow" id="inspector-eyebrow">HEMFÖRLOSSNING · KOHORTSTUDIE</p>
+      <h2 id="inspector-title">Kunskapsgrafens stjärnbilder</h2>
+      <p id="inspector-summary">
+        Under natthimlen framträder forskningens samband som navigerbara konstellationer. Klicka på en nod direkt i stjärnhimlen för att granska källans metadata och citeringar.
+      </p>
+
+      <div style="display:flex; flex-wrap:wrap; gap:var(--space-xs); align-items:center;">
+        <span class="evidence-badge" id="inspector-badge">PEER REVIEWED</span>
+        <span class="evidence-badge" id="inspector-confidence" style="border-color:var(--color-primary);">HÖG TILLFÖRLITLIGHET</span>
+      </div>
+
+      <!-- Official Brand Component: Metadatapanel (.meta) -->
+      <dl class="meta" id="inspector-meta">
+        <dt>Ämne</dt>
+        <dd id="meta-topic">Perinatal vård &amp; förlossningsplats</dd>
+        <dt>Kategori</dt>
+        <dd id="meta-category">Prospektiv kohortstudie</dd>
+        <dt>Granskning</dt>
+        <dd id="meta-review">Peer reviewed · Dubbelblind</dd>
+        <dt>Urval</dt>
+        <dd id="meta-sample">n = 48 200 lågriskgravida</dd>
+        <dt>Region</dt>
+        <dd id="meta-region">Norden (Sverige, Norge, Danmark)</dd>
+        <dt>År</dt>
+        <dd id="meta-year">2025</dd>
+        <dt>DOI</dt>
+        <dd id="meta-doi">10.1016/j.evidea.2025.04.012</dd>
+        <dt>Licens</dt>
+        <dd id="meta-license">CC BY 4.0</dd>
+      </dl>
+
+      <!-- Official Brand Component: Kunskapsgrafens nod legend (.graph-legend) -->
+      <div style="padding-top:var(--space-2xs);">
+        <div style="font-family:var(--font-mono); font-size:0.74rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--color-muted); margin-bottom:0.25rem;">
+          Kunskapsgrafens nodtyper (Klicka i himlen till höger):
+        </div>
+        <ul class="graph-legend">
+          <li class="node-study">Studie (Primär)</li>
+          <li class="node-topic">Ämne (Sekundär)</li>
+          <li class="node-region">Region (Sand)</li>
+          <li class="node-material">Övrigt material (Text)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ================================================================
+     OFFICIAL FOOTER
+     ================================================================ -->
+<div class="site-footer-wrap">
+  <footer class="site-footer">
+    <div>
+      <strong style="color:var(--color-primary); font-family:var(--font-heading);">Evidea</strong> — Synliggör forskning. För fler.
+    </div>
+    <div>
+      Kontakt: <a href="mailto:kontakt@evidea.se">kontakt@evidea.se</a>
+    </div>
+    <div>
+      © 2026 Evidea
+    </div>
+  </footer>
+</div>
+
+<!-- ================================================================
+     FLOATING INTERACTIVE CONTROL DOCK
+     ================================================================ -->
+<div class="control-dock" role="region" aria-label="Scenkontroller">
+  <div class="control-dock-inner">
+    <div class="dock-group">
+      <span>SCEN:</span>
+      <button type="button" class="quiet" data-jump="0" aria-pressed="true">01 Gryning</button>
+      <button type="button" class="quiet" data-jump="1" aria-pressed="false">02 Horisont</button>
+      <button type="button" class="quiet" data-jump="2" aria-pressed="false">03 Nattgraf</button>
+    </div>
+    <div class="dock-divider"></div>
+    <div class="dock-group">
+      <label for="wave-speed-slider" style="font-weight:400; font-size:0.75rem;">VÅGRÖRELSE</label>
+      <input type="range" id="wave-speed-slider" class="dock-slider" min="0" max="200" value="100">
+    </div>
+    <div class="dock-divider"></div>
+    <div class="dock-group">
+      <button type="button" class="secondary" id="pure-canvas-btn" style="padding:0.45em 0.85em;">
+        Ren bakgrund
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     PROCEDURAL SOFT-RELIEF WAVE & CONSTELLATION ENGINE (60FPS)
+     ================================================================ -->
+<script>
+(function() {
+  // 1. BRAND-ALIGNED SCENE PALETTES (strictly derived from Evidea tokens.json)
+  const SCENES = {
+    // Act I: Sunrise (Papper #FBF7EF, Sand #E8DFC9, Ljusblå #A9D3F0, Varm orange #F08A24, Tealgrön #0FA39A, Havsblå #0F2F4F)
+    sunrise: {
+      sky: ['#A9D3F0', '#E8DFC9', '#FBF7EF'],
+      sun: { x: 960, y: 340, r: 70, core: '#F08A24', glow: '#E8A72B', dotOpacity: 0.8 },
+      waves: [
+        ['#FBF7EF', '#E8DFC9'],
+        ['#E8DFC9', '#A9D3F0'],
+        ['#A9D3F0', '#5CB8C2'],
+        ['#22C1B3', '#0FA39A'],
+        ['#146B82', '#0F2F4F'],
+        ['#0F2F4F', '#091E34']
+      ],
+      ampScale: 1.0,
+      freqScale: 1.0,
+      cradleLift: 115,
+      weatherOpacity: 0,
+      constellationOpacity: 0
+    },
+    // Act II.A: Stormy Ocean with Rain (Deep Havsblå #0F2F4F, Mörk himmel #1E3A55, Tealgrön #0FA39A, Varm orange beacon #F08A24)
+    storm: {
+      sky: ['#0E141A', '#1E3A55', '#2A4F6E'],
+      sun: { x: 420, y: 210, r: 48, core: '#F08A24', glow: '#F2C063', dotOpacity: 0.35 },
+      waves: [
+        ['#1E3A55', '#0F2F4F'],
+        ['#244B6B', '#13385C'],
+        ['#186678', '#0F2F4F'],
+        ['#0FA39A', '#0D4361'],
+        ['#0F2F4F', '#0B2239'],
+        ['#0B2136', '#06101A']
+      ],
+      ampScale: 2.15,
+      freqScale: 1.45,
+      cradleLift: 160,
+      weatherOpacity: 1,
+      constellationOpacity: 0
+    },
+    // Act II.B: Open Ocean with No Land in Sight (Endless horizon, Ljusblå #A9D3F0, Tealgrön #0FA39A, Havsblå #0F2F4F)
+    ocean: {
+      sky: ['#78B7E2', '#A9D3F0', '#E8DFC9'],
+      sun: { x: 720, y: 245, r: 56, core: '#F2C063', glow: '#A9D3F0', dotOpacity: 0.65 },
+      waves: [
+        ['#A9D3F0', '#6AAcc9'],
+        ['#62B2C6', '#22C1B3'],
+        ['#22C1B3', '#0FA39A'],
+        ['#0FA39A', '#12677A'],
+        ['#135272', '#0F2F4F'],
+        ['#0F2F4F', '#081C30']
+      ],
+      ampScale: 0.65,
+      freqScale: 0.75,
+      cradleLift: 25,
+      weatherOpacity: 1,
+      constellationOpacity: 0
+    },
+    // Act II.C: Desert Dunes (Sand #E8DFC9, Varm orange #F08A24, Varning gold #E8A72B, Mörk sand #2A2823)
+    desert: {
+      sky: ['#E8DFC9', '#F2C063', '#FBF7EF'],
+      sun: { x: 1020, y: 240, r: 78, core: '#F08A24', glow: '#E8A72B', dotOpacity: 0.5 },
+      waves: [
+        ['#FBF7EF', '#E8DFC9'],
+        ['#E8DFC9', '#E8A72B'],
+        ['#F2C063', '#F08A24'],
+        ['#E07B1E', '#B85D18'],
+        ['#8C491E', '#543522'],
+        ['#3D2E24', '#2A2823']
+      ],
+      ampScale: 1.35,
+      freqScale: 0.85,
+      cradleLift: 140,
+      weatherOpacity: 1,
+      constellationOpacity: 0
+    },
+    // Act III: Nighttime Moonlight & Constellations (Mörkt papper #0E141A, Havsblå #0F2F4F, Tealgrön #22C1B3, Ljusblå #A9D3F0)
+    night: {
+      sky: ['#080C10', '#0E141A', '#0F2F4F'],
+      sun: { x: 1120, y: 195, r: 52, core: '#E9EEF2', glow: '#A9D3F0', dotOpacity: 0.95 },
+      waves: [
+        ['#1E3A55', '#0F2F4F'],
+        ['#164863', '#0F2F4F'],
+        ['#0FA39A', '#0F2F4F'],
+        ['#125E6B', '#0B253E'],
+        ['#0F2F4F', '#091A2B'],
+        ['#091826', '#050B11']
+      ],
+      ampScale: 0.78,
+      freqScale: 0.9,
+      cradleLift: 95,
+      weatherOpacity: 0,
+      constellationOpacity: 1
+    }
+  };
+
+  // 2. KUNSKAPSGRAFENS NODER (Act III Constellation Data following brand rules)
+  const GRAPH_NODES = [
+    {
+      id: 'n1', x: 780, y: 190, r: 14, type: 'node-study',
+      label: 'Nordisk Kohort (2025)',
+      eyebrow: 'HEMFÖRLOSSNING · KOHORTSTUDIE',
+      title: 'Perinatala utfall vid planerad hemförlossning i Norden',
+      summary: 'Omfattande nordisk registerbaserad kohortstudie som jämför säkerhet och interventioner hos lågriskföderskor.',
+      badge: 'PEER REVIEWED',
+      confidence: 'HÖG TILLFÖRLITLIGHET',
+      meta: {
+        topic: 'Perinatal vård & förlossningsplats',
+        category: 'Prospektiv kohortstudie (Studie · Primär)',
+        review: 'Peer reviewed · Dubbelblind',
+        sample: 'n = 48 200 lågriskgravida',
+        region: 'Norden (Sverige, Norge, Danmark)',
+        year: '2025',
+        doi: '10.1016/j.evidea.2025.04.012',
+        license: 'CC BY 4.0'
+      }
+    },
+    {
+      id: 'n2', x: 940, y: 140, r: 17, type: 'node-topic',
+      label: 'Ämne: Barnmorskestöd',
+      eyebrow: 'KONTINUERLIGT STÖD · ÄMNESNOD',
+      title: 'Kontinuerligt stöd under förlossning (Caseload Midwifery)',
+      summary: 'Ämneskluster som sammanlänkar 14 randomiserade studier och 3 systematiska översikter kring kontinuitet i vårdkedjan.',
+      badge: 'SYSTEMATISK ÖVERSIKT',
+      confidence: 'STARK EVIDENSGRAD',
+      meta: {
+        topic: 'Kontinuitet i förlossningsvård',
+        category: 'Ämneskluster (Ämne · Sekundär)',
+        review: 'Cochrane & SBU-granskad syntes',
+        sample: '17 studier · n = 18 500',
+        region: 'Internationell / Skandinavien',
+        year: '2024–2026',
+        doi: '10.1002/14651858.CD003766',
+        license: 'CC BY-NC 4.0'
+      }
+    },
+    {
+      id: 'n3', x: 1090, y: 245, r: 13, type: 'node-study',
+      label: 'RCT: Smärtlindring',
+      eyebrow: 'SMÄRTLINDRING · RANDOMISERAD STUDIE',
+      title: 'Icke-farmakologisk smärtlindring och vattenfödsel',
+      summary: 'Randomiserad kontrollerad studie som utvärderar upplevd trygghet, förlossningslängd och neonatal Apgar-poäng.',
+      badge: 'PEER REVIEWED · RCT',
+      confidence: 'MÅTTLIG TILL HÖG',
+      meta: {
+        topic: 'Vattenfödsel & fysiologisk smärtlindring',
+        category: 'Randomiserad kontrollerad studie (Studie · Primär)',
+        review: 'Peer reviewed · Etikprövad',
+        sample: 'n = 6 410 deltagare',
+        region: 'Västra Götaland & Skåne',
+        year: '2024',
+        doi: '10.1136/bmj-2024-078912',
+        license: 'CC BY 4.0'
+      }
+    },
+    {
+      id: 'n4', x: 865, y: 295, r: 12, type: 'node-region',
+      label: 'Region: Skandinavien',
+      eyebrow: 'VÅRDSYSTEM · REGIONSNOD',
+      title: 'Nordiska medicinska födelseregistret',
+      summary: 'Geografisk nod som filtrerar evidens utifrån nordiska vårdriktlinjer, utbildningskrav och överföringsavstånd.',
+      badge: 'REGISTERDATA · OFFENTLIG',
+      confidence: 'FULLSTÄNDIG TÄCKNING',
+      meta: {
+        topic: 'Demografi & vårdsystemkontext',
+        category: 'Geografisk kontext (Region · Sand)',
+        review: 'Socialstyrelsen & Nordisk Statistik',
+        sample: 'Totalpopulation 2015–2025',
+        region: 'Sverige, Norge, Danmark, Finland',
+        year: '2026',
+        doi: '10.5281/zenodo.evidea.nordic',
+        license: 'CC0 1.0 Public Domain'
+      }
+    },
+    {
+      id: 'n5', x: 1230, y: 170, r: 11, type: 'node-material',
+      label: 'Riktlinje: SBU & WHO',
+      eyebrow: 'KLINISKA RIKTLINJER · ÖVRIGT MATERIAL',
+      title: 'Nationella riktlinjer för intrapartal vård',
+      summary: 'Sammanställning av beslutsstöd, patientinformation och kliniska rekommendationer kopplade till primärstudierna.',
+      badge: 'KLINISKT BESLUTSSTÖD',
+      confidence: 'VERIFIERAD KÄLLA',
+      meta: {
+        topic: 'Tillämpade vårdriktlinjer',
+        category: 'Riktlinjedokument (Övrigt material · Text)',
+        review: 'Myndighetsgranskad konsensus',
+        sample: 'Syntes av 92 publikationer',
+        region: 'Nationell (Sverige)',
+        year: '2025',
+        doi: '10.17226/evidea-guideline-25',
+        license: 'CC BY 4.0'
+      }
+    },
+    {
+      id: 'n6', x: 690, y: 310, r: 12, type: 'node-topic',
+      label: 'Ämne: Patientautonomi',
+      eyebrow: 'INFORMERAT VAL · ÄMNESNOD',
+      title: 'Delat beslutsfattande inom reproduktiv hälsa',
+      summary: 'Kvalitativa och kvantitativa studier om hur tillgänglig forskningskommunikation minskar oro hos blivande föräldrar.',
+      badge: 'PEER REVIEWED · SYNTES',
+      confidence: 'HÖG RELEVANS',
+      meta: {
+        topic: 'Patientdelaktighet & kommunikation',
+        category: 'Ämneskluster (Ämne · Sekundär)',
+        review: 'Peer reviewed · Mixed-methods',
+        sample: '24 studier · n = 9 300',
+        region: 'Europa & Norden',
+        year: '2025',
+        doi: '10.1016/j.socscimed.2025.116',
+        license: 'CC BY 4.0'
+      }
+    }
+  ];
+
+  const GRAPH_EDGES = [
+    ['n1', 'n2'], ['n2', 'n3'], ['n1', 'n4'],
+    ['n2', 'n4'], ['n3', 'n4'], ['n2', 'n5'],
+    ['n3', 'n5'], ['n1', 'n6'], ['n4', 'n6']
+  ];
+
+  // 3. STATE & DOM REFERENCES
+  let currentAct = 0; // 0 = sunrise, 1 = metaphor, 2 = night
+  let activeMetaphor = 'storm'; // 'storm' | 'ocean' | 'desert'
+  let calmFactor = 0.2; // 0..1 slider in Act II
+  let waveSpeedMultiplier = 1.0;
+  let pointerX = 0, pointerY = 0, smoothX = 0, smoothY = 0;
+  let selectedNodeId = 'n1';
+
+  const skyStop0 = document.getElementById('sky-stop-0');
+  const skyStop1 = document.getElementById('sky-stop-1');
+  const skyStop2 = document.getElementById('sky-stop-2');
+  const sunCore  = document.getElementById('sun-core');
+  const haloInner = document.getElementById('halo-inner');
+  const haloMid   = document.getElementById('halo-mid');
+  const haloOuter = document.getElementById('halo-outer');
+  const sunStop0  = document.getElementById('sun-stop-0');
+  const sunStop1  = document.getElementById('sun-stop-1');
+  const celestialDot = document.getElementById('celestial-dot');
+  const weatherLayer = document.getElementById('weather-layer');
+  const constellationLayer = document.getElementById('constellation-layer');
+  const edgesGroup = document.getElementById('constellation-edges');
+  const nodesGroup = document.getElementById('constellation-nodes');
+
+  const wavePaths = [];
+  const waveRims  = [];
+  const waveStops = [];
+  for (let i = 0; i < 6; i++) {
+    wavePaths.push(document.getElementById(`wave-path-${i}`));
+    waveRims.push(document.getElementById(`wave-rim-${i}`));
+    waveStops.push([
+      document.getElementById(`w${i}-top`),
+      document.getElementById(`w${i}-bot`)
+    ]);
+  }
+
+  // 4. COLOR INTERPOLATION HELPERS
+  function hexToRgb(hex) {
+    const clean = hex.replace('#', '');
+    const num = parseInt(clean, 16);
+    return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+  }
+  function rgbToHex(r, g, b) {
+    return '#' + [r, g, b].map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+  }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function lerpColor(hexA, hexB, t) {
+    const [r1, g1, b1] = hexToRgb(hexA);
+    const [r2, g2, b2] = hexToRgb(hexB);
+    return rgbToHex(lerp(r1, r2, t), lerp(g1, g2, t), lerp(b1, b2, t));
+  }
+
+  // Blending two scene descriptors
+  function blendScenes(sceneA, sceneB, t) {
+    return {
+      sky: [
+        lerpColor(sceneA.sky[0], sceneB.sky[0], t),
+        lerpColor(sceneA.sky[1], sceneB.sky[1], t),
+        lerpColor(sceneA.sky[2], sceneB.sky[2], t)
+      ],
+      sun: {
+        x: lerp(sceneA.sun.x, sceneB.sun.x, t),
+        y: lerp(sceneA.sun.y, sceneB.sun.y, t),
+        r: lerp(sceneA.sun.r, sceneB.sun.r, t),
+        core: lerpColor(sceneA.sun.core, sceneB.sun.core, t),
+        glow: lerpColor(sceneA.sun.glow, sceneB.sun.glow, t),
+        dotOpacity: lerp(sceneA.sun.dotOpacity, sceneB.sun.dotOpacity, t)
+      },
+      waves: sceneA.waves.map((pair, idx) => [
+        lerpColor(pair[0], sceneB.waves[idx][0], t),
+        lerpColor(pair[1], sceneB.waves[idx][1], t)
+      ]),
+      ampScale: lerp(sceneA.ampScale, sceneB.ampScale, t),
+      freqScale: lerp(sceneA.freqScale, sceneB.freqScale, t),
+      cradleLift: lerp(sceneA.cradleLift, sceneB.cradleLift, t),
+      weatherOpacity: lerp(sceneA.weatherOpacity, sceneB.weatherOpacity, t),
+      constellationOpacity: lerp(sceneA.constellationOpacity, sceneB.constellationOpacity, t)
+    };
+  }
+
+  // 5. BUILD INTERACTIVE CONSTELLATION GRAPH (Act III)
+  function renderConstellationGraph() {
+    edgesGroup.innerHTML = '';
+    nodesGroup.innerHTML = '';
+
+    // Background faint stars
+    for (let s = 0; s < 38; s++) {
+      const star = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      star.setAttribute('cx', (s * 197) % 1440);
+      star.setAttribute('cy', (s * 83) % 460 + 25);
+      star.setAttribute('r', (s % 3 === 0) ? 1.8 : 1.1);
+      star.setAttribute('fill', '#FBF7EF');
+      star.setAttribute('opacity', (0.25 + (s % 5) * 0.12).toFixed(2));
+      edgesGroup.appendChild(star);
+    }
+
+    GRAPH_EDGES.forEach(([srcId, dstId]) => {
+      const src = GRAPH_NODES.find(n => n.id === srcId);
+      const dst = GRAPH_NODES.find(n => n.id === dstId);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', src.x);
+      line.setAttribute('y1', src.y);
+      line.setAttribute('x2', dst.x);
+      line.setAttribute('y2', dst.y);
+      line.setAttribute('class', 'constellation-edge');
+      line.dataset.source = srcId;
+      line.dataset.target = dstId;
+      edgesGroup.appendChild(line);
+    });
+
+    GRAPH_NODES.forEach(node => {
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('class', `constellation-node ${node.id === selectedNodeId ? 'is-selected' : ''}`);
+      g.dataset.id = node.id;
+
+      // Selection ring per brand rule: "Vald nod får en ring"
+      const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      ring.setAttribute('cx', node.x);
+      ring.setAttribute('cy', node.y);
+      ring.setAttribute('r', node.r + 7);
+      ring.setAttribute('class', 'node-selection-ring');
+
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', node.x);
+      circle.setAttribute('cy', node.y);
+      circle.setAttribute('r', node.r);
+      circle.setAttribute('class', `node-circle ${node.type}`);
+
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', node.x);
+      label.setAttribute('y', node.y + node.r + 18);
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('class', 'node-label');
+      label.textContent = node.label;
+
+      g.appendChild(ring);
+      g.appendChild(circle);
+      g.appendChild(label);
+
+      g.addEventListener('click', () => selectGraphNode(node.id));
+      g.addEventListener('mouseenter', () => highlightNodeConnections(node.id));
+      nodesGroup.appendChild(g);
+    });
+
+    highlightNodeConnections(selectedNodeId);
+  }
+
+  function highlightNodeConnections(nodeId) {
+    document.querySelectorAll('.constellation-edge').forEach(edge => {
+      const connected = edge.dataset.source === nodeId || edge.dataset.target === nodeId;
+      edge.classList.toggle('is-highlighted', connected);
+    });
+  }
+
+  function selectGraphNode(nodeId) {
+    selectedNodeId = nodeId;
+    const node = GRAPH_NODES.find(n => n.id === nodeId);
+    if (!node) return;
+
+    document.querySelectorAll('.constellation-node').forEach(el => {
+      el.classList.toggle('is-selected', el.dataset.id === nodeId);
+    });
+    highlightNodeConnections(nodeId);
+
+    // Update Official Metadatapanel & Eyebrow
+    document.getElementById('inspector-eyebrow').textContent = node.eyebrow;
+    document.getElementById('inspector-title').textContent   = node.title;
+    document.getElementById('inspector-summary').textContent = node.summary;
+    document.getElementById('inspector-badge').textContent   = node.badge;
+    document.getElementById('inspector-confidence').textContent = node.confidence;
+
+    document.getElementById('meta-topic').textContent    = node.meta.topic;
+    document.getElementById('meta-category').textContent = node.meta.category;
+    document.getElementById('meta-review').textContent   = node.meta.review;
+    document.getElementById('meta-sample').textContent   = node.meta.sample;
+    document.getElementById('meta-region').textContent   = node.meta.region;
+    document.getElementById('meta-year').textContent     = node.meta.year;
+    document.getElementById('meta-doi').textContent      = node.meta.doi;
+    document.getElementById('meta-license').textContent  = node.meta.license;
+  }
+
+  // 6. RENDER ACT II METAPHOR OVERLAYS (Rain / Compass Rose / Desert Wind)
+  function updateWeatherGraphics(metaphor) {
+    weatherLayer.innerHTML = '';
+    if (metaphor === 'storm') {
+      // Angled rain streaks + warm orange guiding lighthouse beam
+      const beam = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      beam.setAttribute('points', '420,210 1440,40 1440,390');
+      beam.setAttribute('fill', '#F08A24');
+      beam.setAttribute('opacity', '0.11');
+      weatherLayer.appendChild(beam);
+
+      for (let i = 0; i < 36; i++) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        const x = (i * 47) % 1440;
+        const y = (i * 73) % 620;
+        line.setAttribute('x1', x);
+        line.setAttribute('y1', y);
+        line.setAttribute('x2', x - 18);
+        line.setAttribute('y2', y + 48);
+        line.setAttribute('stroke', '#A9D3F0');
+        line.setAttribute('stroke-width', '1.2');
+        line.setAttribute('stroke-linecap', 'round');
+        line.setAttribute('opacity', '0.32');
+        weatherLayer.appendChild(line);
+      }
+    } else if (metaphor === 'ocean') {
+      // Subtle celestial navigation compass rings on the endless horizon
+      [110, 190, 270].forEach(radius => {
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', 720);
+        c.setAttribute('cy', 245);
+        c.setAttribute('r', radius);
+        c.setAttribute('fill', 'none');
+        c.setAttribute('stroke', '#0F2F4F');
+        c.setAttribute('stroke-width', '1');
+        c.setAttribute('stroke-dasharray', '4 6');
+        c.setAttribute('opacity', '0.22');
+        weatherLayer.appendChild(c);
+      });
+    } else if (metaphor === 'desert') {
+      // Wind-swept sand horizon arcs
+      for (let i = 0; i < 16; i++) {
+        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        dot.setAttribute('cx', (i * 97) % 1440);
+        dot.setAttribute('cy', 320 + (i * 29) % 240);
+        dot.setAttribute('r', 2);
+        dot.setAttribute('fill', '#F08A24');
+        dot.setAttribute('opacity', '0.4');
+        weatherLayer.appendChild(dot);
+      }
+    }
+  }
+
+  // 7. SCROLL PROGRESS & SCENE INTERPOLATION
+  function getInterpolatedScene() {
+    const scrollY = window.scrollY;
+    const vh = window.innerHeight || 900;
+    const progress = Math.max(0, Math.min(2, scrollY / vh));
+
+    // Apply Evidea calm-slider to Act II metaphor
+    const rawAct2 = SCENES[activeMetaphor];
+    const act2Scene = blendScenes(rawAct2, SCENES.sunrise, calmFactor * 0.65);
+
+    if (progress <= 1) {
+      return blendScenes(SCENES.sunrise, act2Scene, progress);
+    } else {
+      return blendScenes(act2Scene, SCENES.night, progress - 1);
+    }
+  }
+
+  // 8. 60FPS ANIMATION LOOP FOR SOFT-RELIEF WAVES & CELESTIAL HALOS
+  const BASE_WAVE_CONFIG = [
+    { baseY: 475, amp1: 22, freq1: 0.0028, speed1: 0.45, amp2: 12, freq2: 0.006, speed2: -0.3 },
+    { baseY: 535, amp1: 28, freq1: 0.0032, speed1: -0.52, amp2: 15, freq2: 0.0055, speed2: 0.38 },
+    { baseY: 595, amp1: 32, freq1: 0.0026, speed1: 0.60, amp2: 16, freq2: 0.0050, speed2: -0.42 },
+    { baseY: 660, amp1: 35, freq1: 0.0035, speed1: -0.68, amp2: 18, freq2: 0.0065, speed2: 0.48 },
+    { baseY: 730, amp1: 30, freq1: 0.0030, speed1: 0.75, amp2: 14, freq2: 0.0058, speed2: -0.55 },
+    { baseY: 805, amp1: 24, freq1: 0.0038, speed1: -0.82, amp2: 11, freq2: 0.0070, speed2: 0.62 }
+  ];
+
+  let time = 0;
+  let lastTimestamp = performance.now();
+
+  function animate(now) {
+    const dt = Math.min(0.05, (now - lastTimestamp) / 1000);
+    lastTimestamp = now;
+    time += dt * waveSpeedMultiplier;
+
+    smoothX += (pointerX - smoothX) * 0.06;
+    smoothY += (pointerY - smoothY) * 0.06;
+
+    const scene = getInterpolatedScene();
+
+    // Update Sky Gradient
+    skyStop0.setAttribute('stop-color', scene.sky[0]);
+    skyStop1.setAttribute('stop-color', scene.sky[1]);
+    skyStop2.setAttribute('stop-color', scene.sky[2]);
+
+    // Update Breathing Concentric Sun / Moon Halos
+    const sunX = scene.sun.x + smoothX * -24;
+    const sunY = scene.sun.y + smoothY * -16;
+    const breath1 = 1 + Math.sin(time * 1.3) * 0.045;
+    const breath2 = 1 + Math.cos(time * 1.0) * 0.065;
+
+    sunCore.setAttribute('cx', sunX);
+    sunCore.setAttribute('cy', sunY);
+    sunCore.setAttribute('r', scene.sun.r);
+    sunCore.setAttribute('fill', scene.sun.core);
+
+    haloInner.setAttribute('cx', sunX);
+    haloInner.setAttribute('cy', sunY);
+    haloInner.setAttribute('r', scene.sun.r * 1.62 * breath1);
+    haloInner.setAttribute('fill', scene.sun.core);
+
+    haloMid.setAttribute('cx', sunX);
+    haloMid.setAttribute('cy', sunY);
+    haloMid.setAttribute('r', scene.sun.r * 2.35 * breath2);
+    haloMid.setAttribute('fill', scene.sun.glow);
+
+    haloOuter.setAttribute('cx', sunX);
+    haloOuter.setAttribute('cy', sunY);
+    haloOuter.setAttribute('r', scene.sun.r * 3.4 * breath1);
+    sunStop0.setAttribute('stop-color', scene.sun.core);
+    sunStop1.setAttribute('stop-color', scene.sun.glow);
+
+    celestialDot.setAttribute('cx', sunX - 155 + Math.sin(time * 0.7) * 6);
+    celestialDot.setAttribute('cy', sunY - 145 + Math.cos(time * 0.9) * 6);
+    celestialDot.setAttribute('opacity', scene.sun.dotOpacity);
+
+    // Update Overlays
+    weatherLayer.setAttribute('opacity', scene.weatherOpacity.toFixed(2));
+    constellationLayer.style.opacity = scene.constellationOpacity.toFixed(2);
+    constellationLayer.style.pointerEvents = scene.constellationOpacity > 0.4 ? 'auto' : 'none';
+
+    // Automatically sync theme for Act III night sky readability
+    const scrollRatio = window.scrollY / (window.innerHeight || 900);
+    if (!window.__manualThemeOverride) {
+      document.documentElement.dataset.theme = scrollRatio > 1.35 ? 'dark' : 'light';
+    }
+
+    // Update 6 Soft-Relief Wave Layers
+    const steps = 28;
+    const width = 1440;
+    const stepX = width / steps;
+
+    for (let i = 0; i < 6; i++) {
+      const cfg = BASE_WAVE_CONFIG[i];
+      waveStops[i][0].setAttribute('stop-color', scene.waves[i][0]);
+      waveStops[i][1].setAttribute('stop-color', scene.waves[i][1]);
+
+      const depthFactor = (i + 1) / 6;
+      const parallaxX = smoothX * (18 * depthFactor);
+      const parallaxY = smoothY * (12 * depthFactor);
+
+      let dTop = '';
+      for (let s = 0; s <= steps; s++) {
+        const x = s * stepX;
+        const normX = (x / width) * 2 - 1; // -1 to +1
+        // Upward cradle curve at viewport edges inspired by the reference hexagonal icons
+        const cradle = Math.pow(normX, 2) * scene.cradleLift * (1 - i * 0.12);
+
+        const wave1 = Math.sin((x + parallaxX) * cfg.freq1 * scene.freqScale + time * cfg.speed1 + i * 0.9) * cfg.amp1 * scene.ampScale;
+        const wave2 = Math.cos((x - parallaxX) * cfg.freq2 * scene.freqScale + time * cfg.speed2 + i * 1.4) * cfg.amp2 * scene.ampScale;
+
+        const y = cfg.baseY + wave1 + wave2 - cradle + parallaxY;
+        dTop += (s === 0 ? `M ${x.toFixed(1)} ${y.toFixed(1)}` : ` L ${x.toFixed(1)} ${y.toFixed(1)}`);
+      }
+
+      waveRims[i].setAttribute('d', dTop);
+      wavePaths[i].setAttribute('d', `${dTop} L 1440 960 L 0 960 Z`);
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  // 9. UI EVENT BINDINGS
+  window.addEventListener('pointermove', (e) => {
+    pointerX = (e.clientX / window.innerWidth) * 2 - 1;
+    pointerY = (e.clientY / window.innerHeight) * 2 - 1;
+  });
+
+  // Metaphor Switcher Buttons
+  const metaphorLabels = {
+    storm: 'METAFOR · STORMIGT HAV',
+    ocean: 'METAFOR · ÖPPET HAV',
+    desert: 'METAFOR · ÖKENLANDSKAP'
+  };
+  document.querySelectorAll('[data-metaphor]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeMetaphor = btn.dataset.metaphor;
+      document.querySelectorAll('[data-metaphor]').forEach(b => {
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
+      document.getElementById('active-metaphor-badge').textContent = metaphorLabels[activeMetaphor];
+      updateWeatherGraphics(activeMetaphor);
+    });
+  });
+
+  // Calm Turbulence Slider
+  const calmSlider = document.getElementById('calm-slider');
+  const calmReadout = document.getElementById('calm-readout');
+  calmSlider.addEventListener('input', () => {
+    calmFactor = Number(calmSlider.value) / 100;
+    calmReadout.textContent = `${calmSlider.value}% LUGN`;
+  });
+
+  // Wave Speed Slider
+  const waveSpeedSlider = document.getElementById('wave-speed-slider');
+  waveSpeedSlider.addEventListener('input', () => {
+    waveSpeedMultiplier = Number(waveSpeedSlider.value) / 100;
+  });
+
+  // Chapter Jump Buttons
+  const sections = [
+    document.getElementById('act-1'),
+    document.getElementById('act-2'),
+    document.getElementById('act-3')
+  ];
+  document.querySelectorAll('[data-jump]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset.jump);
+      if (sections[idx]) {
+        sections[idx].scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+
+  window.addEventListener('scroll', () => {
+    const idx = Math.round(window.scrollY / (window.innerHeight || 900));
+    if (idx !== currentAct) {
+      currentAct = idx;
+      document.querySelectorAll('[data-jump]').forEach(btn => {
+        btn.setAttribute('aria-pressed', String(Number(btn.dataset.jump) === currentAct));
+      });
+    }
+  }, { passive: true });
+
+  // Theme Toggle Button
+  document.getElementById('theme-toggle-btn').addEventListener('click', () => {
+    window.__manualThemeOverride = true;
+    const root = document.documentElement;
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+
+  // Pure Background Toggle
+  const pureBtn = document.getElementById('pure-canvas-btn');
+  pureBtn.addEventListener('click', () => {
+    const isPure = document.body.classList.toggle('pure-canvas');
+    pureBtn.textContent = isPure ? 'Visa webbplats' : 'Ren bakgrund';
+  });
+
+  // Initialize
+  updateWeatherGraphics(activeMetaphor);
+  renderConstellationGraph();
+  selectGraphNode('n1');
+  requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>
