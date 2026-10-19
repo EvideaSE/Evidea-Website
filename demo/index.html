@@ -1,0 +1,1306 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Evidea Story</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    /* Layout: one full-screen canvas scene behind a scroll-snapped 3-act story, fixed nav + dock on top.
+       Single deliberate look: colors are driven per scene by the engine below, not by the viewer theme. */
+    :root {
+        --font-serif: 'Cormorant Garamond', Georgia, serif;
+        --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+        --page-bg: #132A42;
+        --text-primary: #1A3C5A;
+        --text-secondary: #3B6482;
+        --card-bg: rgba(251, 249, 244, 0.86);
+        --card-border: rgba(255, 255, 255, 0.88);
+        --accent-btn: #28628E;
+        --accent-btn-text: #FAF8F5;
+        --badge-bg: rgba(255, 255, 255, 0.65);
+        --safe-t: env(safe-area-inset-top, 0px);
+        --safe-b: env(safe-area-inset-bottom, 0px);
+        --safe-l: env(safe-area-inset-left, 0px);
+        --safe-r: env(safe-area-inset-right, 0px);
+    }
+
+    * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+    html, body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        font-family: var(--font-sans);
+        background-color: var(--page-bg);
+        color: var(--text-primary);
+        -webkit-tap-highlight-color: transparent;
+    }
+    body { user-select: none; -webkit-user-select: none; }
+
+    .font-editorial { font-family: var(--font-serif); }
+    .font-mono-code { font-family: var(--font-mono); }
+
+    /* Full-screen layers */
+    #scene-canvas, #paper-grain, #vignette, #story-scroll-container { position: fixed; inset: 0; width: 100%; height: 100%; }
+    #scene-canvas { z-index: 0; display: block; }
+    #paper-grain { z-index: 10; pointer-events: none; mix-blend-mode: multiply; opacity: 0.25; background-repeat: repeat; background-size: 160px 160px; }
+    #vignette { z-index: 10; pointer-events: none; box-shadow: inset 0 0 120px rgba(15, 35, 58, 0.16); }
+
+    #story-scroll-container {
+        z-index: 20;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+        scrollbar-width: none;
+        transition: opacity 0.5s ease;
+    }
+    #story-scroll-container::-webkit-scrollbar { display: none; }
+    #story-scroll-container > section {
+        min-height: 100%;
+        padding-top: calc(5.5rem + var(--safe-t));
+        padding-bottom: calc(5.5rem + var(--safe-b));
+        padding-left: max(20px, var(--safe-l));
+        padding-right: max(20px, var(--safe-r));
+    }
+    @media (min-width: 768px) {
+        #story-scroll-container > section { padding-bottom: calc(7rem + var(--safe-b)); padding-left: max(40px, var(--safe-l)); padding-right: max(40px, var(--safe-r)); }
+    }
+
+    /* Panels: solid translucent fill instead of backdrop blur (blur over a live scene re-renders every frame) */
+    .glass-panel {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        box-shadow:
+            0 20px 50px -15px rgba(15, 38, 66, 0.18),
+            0 4px 14px -2px rgba(15, 38, 66, 0.08),
+            inset 0 1px 1px rgba(255, 255, 255, 0.35);
+        transition: background-color 0.6s ease, border-color 0.6s ease, color 0.6s ease;
+    }
+
+    .hex-badge-container {
+        filter: drop-shadow(0 16px 26px rgba(20, 55, 88, 0.18));
+        transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    @media (hover: hover) {
+        .hex-badge-container:hover { transform: translateY(-6px) scale(1.03); }
+    }
+
+    #top-nav {
+        padding-top: calc(0.75rem + var(--safe-t));
+        padding-left: max(12px, var(--safe-l));
+        padding-right: max(12px, var(--safe-r));
+    }
+    @media (min-width: 640px) { #top-nav { padding-left: max(32px, var(--safe-l)); padding-right: max(32px, var(--safe-r)); } }
+    #bottom-dock { bottom: calc(12px + var(--safe-b)); }
+    #restore-zen-btn { bottom: calc(24px + var(--safe-b)); right: calc(24px + var(--safe-r)); }
+
+    .no-scrollbar { scrollbar-width: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+
+    button:focus-visible, input:focus-visible { outline: 2px solid var(--accent-btn); outline-offset: 2px; }
+
+    input[type="range"] {
+        -webkit-appearance: none; appearance: none;
+        background: rgba(125, 165, 195, 0.28);
+        height: 5px; border-radius: 999px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none; appearance: none;
+        width: 18px; height: 18px; border-radius: 50%;
+        background: var(--accent-btn); border: 2px solid #ffffff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer;
+    }
+    input[type="range"]::-moz-range-thumb {
+        width: 16px; height: 16px; border-radius: 50%;
+        background: var(--accent-btn); border: 2px solid #ffffff; cursor: pointer;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .animate-ping, .animate-pulse { animation: none !important; }
+        #story-scroll-container { scroll-behavior: auto; }
+    }
+</style>
+
+<canvas id="scene-canvas" aria-hidden="true"></canvas>
+<div id="paper-grain"></div>
+<div id="vignette"></div>
+
+<header id="top-nav" class="fixed top-0 left-0 right-0 z-40 flex items-center justify-between gap-2 pb-3 md:pb-5 transition-all duration-500">
+    <div class="flex items-center gap-2 sm:gap-3 glass-panel px-3 sm:px-4 py-2 rounded-full cursor-pointer shrink-0" onclick="scrollToAct(0)">
+        <div class="w-7 h-7 rounded-full flex items-center justify-center shadow-inner" style="background: linear-gradient(135deg, #FAD59B, #3B7DA6);">
+            <div class="w-2.5 h-2.5 rounded-full bg-white"></div>
+        </div>
+        <span class="font-editorial font-bold text-xl tracking-wide" style="color: var(--text-primary);">EVIDEA</span>
+        <span class="hidden md:inline-block text-[11px] uppercase tracking-widest px-2.5 py-0.5 rounded-full font-semibold" style="background: var(--badge-bg); color: var(--text-secondary);">
+            Science &amp; Credibility
+        </span>
+    </div>
+
+    <nav class="hidden lg:flex items-center gap-1.5 glass-panel p-1.5 rounded-full">
+        <button onclick="scrollToAct(0)" id="nav-act-0" class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 shadow-sm" style="background-color: var(--accent-btn); color: var(--accent-btn-text);">
+            01. The Dawn (Sunrise)
+        </button>
+        <button onclick="scrollToAct(1)" id="nav-act-1" class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 hover:bg-white/30" style="color: var(--text-primary);">
+            02. The Search (Storm / Ocean / Desert)
+        </button>
+        <button onclick="scrollToAct(2)" id="nav-act-2" class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 hover:bg-white/30" style="color: var(--text-primary);">
+            03. Star Map (Constellations)
+        </button>
+    </nav>
+
+    <div class="flex items-center gap-1 sm:gap-2 glass-panel p-1.5 rounded-full shrink-0">
+        <button id="btn-story-ui" onclick="setCanvasViewMode('story')" class="px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all duration-300 shadow-sm whitespace-nowrap" style="background-color: var(--accent-btn); color: var(--accent-btn-text);">
+            Story UI
+        </button>
+        <button id="btn-pure-canvas" onclick="setCanvasViewMode('pure')" class="px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all duration-300 hover:bg-white/30 whitespace-nowrap" style="color: var(--text-primary);">
+            Pure Artwork
+        </button>
+        <button onclick="toggleZenFullscreen()" title="Hide All Bars (ESC to restore)" aria-label="Hide all bars" class="p-1.5 rounded-full hover:bg-white/40 transition-colors" style="color: var(--text-primary);">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+        </button>
+    </div>
+</header>
+
+<div id="story-scroll-container" class="snap-y snap-proximity lg:snap-mandatory">
+        
+        <!-- =================================================================
+             ACT I: THE DAWN OF EVIDEA (SUNRISE SCENE)
+             ================================================================= -->
+        <section id="section-act-0" class="w-full min-h-screen snap-start flex items-center justify-center px-5 sm:px-10 md:px-16 pt-20 pb-28">
+            <div class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+                
+                <!-- Left Editorial Narrative -->
+                <div class="lg:col-span-6 space-y-5 text-center lg:text-left">
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-panel text-xs font-semibold tracking-wider uppercase" style="color: var(--text-secondary);">
+                        <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                        Act I &bull; A New Beginning in Healthcare
+                    </div>
+
+                    <h1 class="font-editorial text-4xl sm:text-5xl xl:text-6xl font-semibold leading-[1.08] tracking-tight" style="color: var(--text-primary);">
+                        The dawn of <span class="italic font-normal">reliable</span>, human-centered evidence.
+                    </h1>
+
+                    <p class="text-sm sm:text-base md:text-lg leading-relaxed max-w-xl mx-auto lg:mx-0" style="color: var(--text-secondary);">
+                        <strong>Evidea</strong> is born from a simple promise: when you or someone you love faces a healthcare decision, finding trustworthy clinical science shouldn't feel cold or unreachable. We bring warm clarity to complex medical evidence.
+                    </p>
+
+                    <div class="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-3">
+                        <button onclick="scrollToAct(1)" class="px-6 py-3 rounded-full text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2" style="background-color: var(--accent-btn); color: var(--accent-btn-text);">
+                            <span>Explore Why We Built Evidea</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                            </svg>
+                        </button>
+                        <button onclick="triggerWavePulse()" class="glass-panel px-5 py-3 rounded-full text-sm font-semibold hover:bg-white/75 transition-all duration-300" style="color: var(--text-primary);">
+                            Send Sunrise Ripple
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Hexagonal Soft-Relief Emblem Showcase (From Reference Icons) -->
+                <div class="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-5 items-center justify-center">
+                    <!-- Emblem 1: Human Care & Empathy -->
+                    <div class="glass-panel rounded-3xl p-5 flex flex-col items-center text-center group cursor-pointer" onclick="triggerWavePulse()">
+                        <div class="hex-badge-container w-36 h-40 sm:w-40 sm:h-44 mb-3 flex items-center justify-center">
+                            <svg viewBox="0 0 220 250" class="w-full h-full overflow-visible">
+                                <defs>
+                                    <clipPath id="hexClipMom">
+                                        <path d="M110 8 C122 8 192 48 202 65 C212 82 212 168 202 185 C192 202 122 242 110 242 C98 242 28 202 18 185 C8 168 8 82 18 65 C28 48 98 8 110 8 Z" />
+                                    </clipPath>
+                                    <linearGradient id="badgeSkyMom" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#89C7C9" />
+                                        <stop offset="60%" stop-color="#E7EFE3" />
+                                        <stop offset="100%" stop-color="#F7EBD2" />
+                                    </linearGradient>
+                                    <linearGradient id="swaddleGradMom" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stop-color="#FFFDF9" />
+                                        <stop offset="55%" stop-color="#CBE5E5" />
+                                        <stop offset="100%" stop-color="#69ACC4" />
+                                    </linearGradient>
+                                </defs>
+                                <g clip-path="url(#hexClipMom)">
+                                    <rect width="220" height="250" fill="url(#badgeSkyMom)" />
+                                    <circle cx="152" cy="112" r="46" fill="#FCE8C3" opacity="0.45" />
+                                    <circle cx="152" cy="112" r="32" fill="#FBDDB0" opacity="0.65" />
+                                    <circle cx="152" cy="112" r="20" fill="#F6BE85" />
+                                    <circle cx="122" cy="48" r="6.5" fill="#EBF6F6" opacity="0.9" />
+                                    <path d="M55 68 C15 118 28 198 110 232 C165 215 178 158 145 128 C115 102 72 122 65 155 C55 125 60 88 55 68 Z" fill="url(#swaddleGradMom)" />
+                                    <circle cx="96" cy="96" r="22" fill="#447494" />
+                                    <circle cx="75" cy="78" r="12" fill="#366280" />
+                                    <circle cx="122" cy="138" r="15" fill="#F4C79B" />
+                                    <path d="M100 155 Q125 130 148 152 Q132 182 98 175 Z" fill="#FBF8F3" />
+                                    <path d="M0 185 Q65 160 125 190 T220 175 L220 250 L0 250 Z" fill="#5D9FB8" opacity="0.9" />
+                                    <path d="M0 210 Q95 185 160 205 T220 195 L220 250 L0 250 Z" fill="#2E6F9E" />
+                                </g>
+                                <path d="M110 8 C122 8 192 48 202 65 C212 82 212 168 202 185 C192 202 122 242 110 242 C98 242 28 202 18 185 C8 168 8 82 18 65 C28 48 98 8 110 8 Z" fill="none" stroke="#FFFFFF" stroke-width="3" opacity="0.85" />
+                            </svg>
+                        </div>
+                        <h3 class="font-editorial text-xl font-semibold" style="color: var(--text-primary);">Personal Care</h3>
+                        <p class="text-xs mt-1 leading-relaxed" style="color: var(--text-secondary);">
+                            Empowering patients and families with comforting, accessible clarity.
+                        </p>
+                    </div>
+
+                    <!-- Emblem 2: Rigorous Science -->
+                    <div class="glass-panel rounded-3xl p-5 flex flex-col items-center text-center group cursor-pointer" onclick="triggerWavePulse()">
+                        <div class="hex-badge-container w-36 h-40 sm:w-40 sm:h-44 mb-3 flex items-center justify-center">
+                            <svg viewBox="0 0 220 250" class="w-full h-full overflow-visible">
+                                <defs>
+                                    <clipPath id="hexClipScope">
+                                        <path d="M110 8 C122 8 192 48 202 65 C212 82 212 168 202 185 C192 202 122 242 110 242 C98 242 28 202 18 185 C8 168 8 82 18 65 C28 48 98 8 110 8 Z" />
+                                    </clipPath>
+                                    <linearGradient id="scopeBodyGrad" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stop-color="#FFFFFF" />
+                                        <stop offset="65%" stop-color="#CBE3E8" />
+                                        <stop offset="100%" stop-color="#7BAEC4" />
+                                    </linearGradient>
+                                </defs>
+                                <g clip-path="url(#hexClipScope)">
+                                    <rect width="220" height="250" fill="url(#badgeSkyMom)" />
+                                    <circle cx="72" cy="105" r="46" fill="#FCE8C3" opacity="0.45" />
+                                    <circle cx="72" cy="105" r="33" fill="#FBDDB0" opacity="0.65" />
+                                    <circle cx="72" cy="105" r="22" fill="#F6BE85" />
+                                    <circle cx="92" cy="56" r="6" fill="#EBF6F6" opacity="0.9" />
+                                    <path d="M0 155 Q50 135 110 165 T220 120 L220 250 L0 250 Z" fill="#7EC0C4" opacity="0.85" />
+                                    <path d="M122 90 C162 90 168 155 122 165 L95 165 L95 148 L120 148 C142 148 145 108 120 108 Z" fill="url(#scopeBodyGrad)" />
+                                    <rect x="65" y="142" width="54" height="8" rx="4" fill="#366280" />
+                                    <g transform="translate(115, 92) rotate(28)">
+                                        <rect x="-11" y="-42" width="22" height="16" rx="3" fill="#3B6988" />
+                                        <rect x="-16" y="-28" width="32" height="52" rx="6" fill="url(#scopeBodyGrad)" />
+                                        <rect x="-10" y="22" width="20" height="14" rx="3" fill="#3B6988" />
+                                    </g>
+                                    <circle cx="128" cy="100" r="12" fill="#528AAE" stroke="#EDF7F8" stroke-width="3" />
+                                    <path d="M55 178 C55 168 65 164 80 164 L140 164 C152 164 160 170 160 178 L160 188 L55 188 Z" fill="url(#scopeBodyGrad)" />
+                                    <path d="M0 192 Q65 208 115 182 T220 185 L220 250 L0 250 Z" fill="#6BB6BD" />
+                                    <path d="M0 218 Q95 225 140 195 T220 190 L220 250 L0 250 Z" fill="#3578A4" />
+                                </g>
+                                <path d="M110 8 C122 8 192 48 202 65 C212 82 212 168 202 185 C192 202 122 242 110 242 C98 242 28 202 18 185 C8 168 8 82 18 65 C28 48 98 8 110 8 Z" fill="none" stroke="#FFFFFF" stroke-width="3" opacity="0.85" />
+                            </svg>
+                        </div>
+                        <h3 class="font-editorial text-xl font-semibold" style="color: var(--text-primary);">Verified Science</h3>
+                        <p class="text-xs mt-1 leading-relaxed" style="color: var(--text-secondary);">
+                            Evaluating methodology, sample sizes, and peer-reviewed credibility.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- =================================================================
+             ACT II: NEVER LOST IN THE UNCERTAINTY (STORM / OPEN OCEAN / DESERT)
+             ================================================================= -->
+        <section id="section-act-1" class="w-full min-h-screen snap-start flex items-center justify-center px-5 sm:px-10 md:px-16 pt-20 pb-28">
+            <div class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                
+                <!-- Left Column: Narrative & Metaphor Description -->
+                <div class="lg:col-span-6 space-y-5 text-center lg:text-left">
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-panel text-xs font-semibold tracking-wider uppercase" style="color: var(--text-secondary);">
+                        <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+                        Act II &bull; Overcoming Information Overload
+                    </div>
+
+                    <h2 id="act2-heading" class="font-editorial text-4xl sm:text-5xl xl:text-6xl font-semibold leading-[1.08] tracking-tight" style="color: var(--text-primary);">
+                        You shouldn't feel caught in a <span class="italic font-normal">storm</span> of conflicting claims.
+                    </h2>
+
+                    <p id="act2-description" class="text-sm sm:text-base md:text-lg leading-relaxed max-w-xl mx-auto lg:mx-0" style="color: var(--text-secondary);">
+                        Searching for healthcare answers online often feels like turbulent seas—contradictory articles, hidden biases, and overwhelming noise. Evidea acts as a warm guiding beacon that calms the waters and filters out low-credibility sources.
+                    </p>
+
+                    <div class="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-3">
+                        <button onclick="scrollToAct(2)" class="px-6 py-3 rounded-full text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2" style="background-color: var(--accent-btn); color: var(--accent-btn-text);">
+                            <span>See How Evidea Maps the Way</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Column: Interactive Metaphor Switcher (Stormy Rain / Open Ocean / Desert Dunes) + Evidea Clarity Slider -->
+                <div class="lg:col-span-6">
+                    <div class="glass-panel rounded-3xl p-6 sm:p-7 space-y-6">
+                        <div class="flex items-center justify-between border-b border-slate-400/20 pb-4">
+                            <div>
+                                <span class="text-[11px] uppercase tracking-widest font-semibold block" style="color: var(--text-secondary);">Interactive Metaphor Stage</span>
+                                <h3 class="font-editorial text-2xl font-semibold mt-0.5" style="color: var(--text-primary);">Choose the "Feeling Lost" Scene</h3>
+                            </div>
+                            <span class="text-xs font-mono-code px-2.5 py-1 rounded-full" style="background: var(--badge-bg); color: var(--text-primary);">Live SVG Morph</span>
+                        </div>
+
+                        <!-- 3 Metaphor Cards -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <!-- Option 2A: Stormy Ocean with Rain -->
+                            <button onclick="selectAct2Variant('storm')" id="btn-variant-storm" class="p-4 rounded-2xl text-left transition-all duration-300 border flex flex-col justify-between h-32 shadow-sm" style="background-color: var(--accent-btn); color: var(--accent-btn-text); border-color: transparent;">
+                                <div class="flex items-center justify-between">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 19v2m4-2v2m4-2v2" />
+                                    </svg>
+                                    <span class="text-[10px] uppercase tracking-wider font-mono-code opacity-80">02.A</span>
+                                </div>
+                                <div>
+                                    <div class="font-semibold text-sm">Stormy Ocean</div>
+                                    <div class="text-[11px] opacity-80 mt-0.5">High swells &amp; rain</div>
+                                </div>
+                            </button>
+
+                            <!-- Option 2B: Open Ocean (No Land in Sight) -->
+                            <button onclick="selectAct2Variant('open_ocean')" id="btn-variant-open_ocean" class="p-4 rounded-2xl text-left transition-all duration-300 border flex flex-col justify-between h-32 hover:bg-white/40" style="background: var(--badge-bg); color: var(--text-primary); border-color: var(--card-border);">
+                                <div class="flex items-center justify-between">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="text-[10px] uppercase tracking-wider font-mono-code opacity-75">02.B</span>
+                                </div>
+                                <div>
+                                    <div class="font-semibold text-sm">Open Ocean</div>
+                                    <div class="text-[11px] opacity-75 mt-0.5">No land in sight</div>
+                                </div>
+                            </button>
+
+                            <!-- Option 2C: Vast Desert Scene -->
+                            <button onclick="selectAct2Variant('desert')" id="btn-variant-desert" class="p-4 rounded-2xl text-left transition-all duration-300 border flex flex-col justify-between h-32 hover:bg-white/40" style="background: var(--badge-bg); color: var(--text-primary); border-color: var(--card-border);">
+                                <div class="flex items-center justify-between">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                    </svg>
+                                    <span class="text-[10px] uppercase tracking-wider font-mono-code opacity-75">02.C</span>
+                                </div>
+                                <div>
+                                    <div class="font-semibold text-sm">Vast Desert</div>
+                                    <div class="text-[11px] opacity-75 mt-0.5">Sculpted sand dunes</div>
+                                </div>
+                            </button>
+                        </div>
+
+                        <!-- Interactive "Evidea Clarity / Calm the Environment" Control -->
+                        <div class="p-4 rounded-2xl space-y-2.5" style="background: var(--badge-bg);">
+                            <div class="flex items-center justify-between">
+                                <label for="clarity-slider" class="text-xs font-semibold flex items-center gap-2" style="color: var(--text-primary);">
+                                    <span>Evidea Guidance Filter (Calm the Turbulence)</span>
+                                </label>
+                                <span id="clarity-percent-badge" class="text-xs font-mono-code font-semibold px-2 py-0.5 rounded bg-white/70" style="color: var(--text-primary);">0% Raw Noise</span>
+                            </div>
+                            <input id="clarity-slider" type="range" min="0" max="1" step="0.02" value="0" class="w-full" />
+                            <div class="flex justify-between text-[11px]" style="color: var(--text-secondary);">
+                                <span>Unfiltered Information Storm</span>
+                                <span>Calmed &amp; Verified by Evidea</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- =================================================================
+             ACT III: NAVIGATING BY THE CONSTELLATIONS OF SCIENCE (NIGHT GRAPH)
+             ================================================================= -->
+        <section id="section-act-2" class="w-full min-h-screen snap-start flex items-end md:items-center justify-center px-5 sm:px-10 md:px-16 pt-24 pb-28 pointer-events-none">
+            <div class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-end pt-36 md:pt-44">
+                
+                <!-- Left Editorial Narrative Card (Positioned lower so the upper night sky constellation graph shines) -->
+                <div class="lg:col-span-6 glass-panel rounded-3xl p-6 sm:p-7 space-y-4 pointer-events-auto">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase" style="background: var(--badge-bg); color: var(--text-secondary);">
+                        <span class="w-2 h-2 rounded-full bg-cyan-300 animate-pulse"></span>
+                        Act III &bull; Celestial Citation Mapping
+                    </div>
+
+                    <h2 class="font-editorial text-3xl sm:text-4xl xl:text-5xl font-semibold leading-[1.1]" style="color: var(--text-primary);">
+                        Navigating by the <span class="italic font-normal text-cyan-200">constellations</span> of science.
+                    </h2>
+
+                    <p class="text-xs sm:text-sm md:text-base leading-relaxed" style="color: var(--text-secondary);">
+                        Under a tranquil moonlit sky, Evidea connects peer-reviewed clinical trials, systematic reviews, and patient outcomes into an intuitive <strong>Constellation Knowledge Graph</strong>. Click any glowing star node in the night sky above to inspect its source credibility and citation links.
+                    </p>
+
+                    <div class="pt-1 flex flex-wrap items-center gap-2.5">
+                        <button onclick="highlightRandomConstellationNode()" class="px-4 py-2.5 rounded-full text-xs sm:text-sm font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2" style="background-color: var(--accent-btn); color: var(--accent-btn-text);">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            <span>Trace Next Evidence Pathway</span>
+                        </button>
+                        <button onclick="setCanvasViewMode('pure')" class="px-4 py-2.5 rounded-full text-xs sm:text-sm font-semibold border hover:bg-white/10 transition-all" style="color: var(--text-primary); border-color: var(--card-border);">
+                            Explore Full-Screen Star Map
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Interactive Node Inspector Card (Updates live when clicking/hovering stars in the sky) -->
+                <div class="lg:col-span-6 pointer-events-auto">
+                    <div id="node-inspector-card" class="glass-panel rounded-3xl p-6 sm:p-7 space-y-4 border-l-4 border-l-cyan-300">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span id="inspector-type" class="text-[11px] font-mono-code uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-cyan-400/20 text-cyan-200 font-medium">
+                                        Cochrane Systematic Review
+                                    </span>
+                                    <span id="inspector-year" class="text-xs font-mono-code opacity-75" style="color: var(--text-secondary);">2025 &bull; Peer-Reviewed</span>
+                                </div>
+                                <h3 id="inspector-title" class="font-editorial text-2xl sm:text-3xl font-semibold mt-1.5" style="color: var(--text-primary);">
+                                    Maternal &amp; Neonatal Care Meta-Analysis
+                                </h3>
+                            </div>
+                            <!-- Credibility Score Ring -->
+                            <div class="flex flex-col items-center justify-center px-3.5 py-2 rounded-2xl shrink-0" style="background: var(--badge-bg);">
+                                <span id="inspector-score" class="font-mono-code text-lg font-bold text-cyan-300">98%</span>
+                                <span class="text-[10px] uppercase tracking-wider opacity-80" style="color: var(--text-secondary);">Credibility</span>
+                            </div>
+                        </div>
+
+                        <p id="inspector-summary" class="text-xs sm:text-sm leading-relaxed" style="color: var(--text-secondary);">
+                            Synthesizes 42 randomized controlled trials (n = 18,400 participants) with high methodological rigor, minimal publication bias, and replicated longitudinal outcomes.
+                        </p>
+
+                        <!-- Connected Source Pills -->
+                        <div class="pt-2 border-t border-white/15 flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <span class="font-mono-code text-[11px]" style="color: var(--text-secondary);">
+                                Sample Size: <strong id="inspector-sample" style="color: var(--text-primary);">n = 18,400</strong>
+                            </span>
+                            <span class="font-mono-code text-[11px]" style="color: var(--text-secondary);">
+                                Connected Nodes: <strong id="inspector-links" class="text-cyan-300">4 Direct Citations</strong>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+</div>
+
+<aside id="bottom-dock" class="fixed left-1/2 -translate-x-1/2 z-40 w-[calc(100%-24px)] max-w-5xl transition-all duration-500">
+    <div class="glass-panel rounded-[28px] md:rounded-2xl lg:rounded-full px-2 sm:px-6 py-2 md:py-3 flex flex-col lg:flex-row items-center justify-between gap-3">
+        <div class="no-scrollbar flex flex-nowrap md:flex-wrap xl:flex-nowrap items-center justify-start md:justify-center gap-1.5 w-full lg:w-auto overflow-x-auto">
+            <span class="text-[10px] uppercase tracking-widest font-bold mr-1 hidden xl:inline" style="color: var(--text-secondary);">Scene:</span>
+
+            <button onclick="selectSceneDirect('sunrise')" id="dock-btn-sunrise" class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap" style="background-color: var(--accent-btn); color: var(--accent-btn-text);">
+                <span class="w-2 h-2 rounded-full bg-[#F6BE85]"></span>
+                1. Sunrise
+            </button>
+            <button onclick="selectSceneDirect('storm')" id="dock-btn-storm" class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all hover:bg-white/30 whitespace-nowrap" style="color: var(--text-primary);">
+                <span class="w-2 h-2 rounded-full bg-[#4B749F]"></span>
+                2a. Stormy Rain
+            </button>
+            <button onclick="selectSceneDirect('open_ocean')" id="dock-btn-open_ocean" class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all hover:bg-white/30 whitespace-nowrap" style="color: var(--text-primary);">
+                <span class="w-2 h-2 rounded-full bg-[#246A99]"></span>
+                2b. Open Ocean
+            </button>
+            <button onclick="selectSceneDirect('desert')" id="dock-btn-desert" class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all hover:bg-white/30 whitespace-nowrap" style="color: var(--text-primary);">
+                <span class="w-2 h-2 rounded-full bg-[#E08A54]"></span>
+                2c. Desert Dunes
+            </button>
+            <button onclick="selectSceneDirect('night')" id="dock-btn-night" class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all hover:bg-white/30 whitespace-nowrap" style="color: var(--text-primary);">
+                <span class="w-2 h-2 rounded-full bg-[#68E0F8]"></span>
+                3. Star Constellations
+            </button>
+        </div>
+
+        <div class="hidden lg:block w-px h-6 bg-slate-400/30"></div>
+
+        <div class="hidden md:flex flex-wrap items-center justify-center gap-4 text-xs">
+            <div class="flex items-center gap-2">
+                <label for="ctrl-flow" class="font-medium whitespace-nowrap" style="color: var(--text-primary);">Flow</label>
+                <input id="ctrl-flow" type="range" min="0" max="2.4" step="0.1" value="1.0" class="w-20">
+            </div>
+            <div class="flex items-center gap-2">
+                <label for="ctrl-relief" class="font-medium whitespace-nowrap" style="color: var(--text-primary);">Swell Height</label>
+                <input id="ctrl-relief" type="range" min="0.3" max="1.8" step="0.05" value="1.0" class="w-20">
+            </div>
+            <div class="flex items-center gap-2">
+                <label for="ctrl-grain" class="font-medium whitespace-nowrap" style="color: var(--text-primary);">Paper Grain</label>
+                <input id="ctrl-grain" type="range" min="0" max="0.55" step="0.02" value="0.25" class="w-20">
+            </div>
+        </div>
+    </div>
+</aside>
+
+<button id="restore-zen-btn" onclick="toggleZenFullscreen()" class="fixed z-50 glass-panel px-4 py-2.5 rounded-full text-xs font-semibold flex items-center gap-2 opacity-0 pointer-events-none translate-y-4 transition-all duration-500" style="color: var(--text-primary);">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+    <span>Restore Controls</span>
+</button>
+
+<script>
+(() => {
+    /* ------------------------------------------------------------------
+       COLOR + MATH HELPERS
+       ------------------------------------------------------------------ */
+    const hexCache = new Map();
+    function hexToRgb(hex) {
+        let v = hexCache.get(hex);
+        if (!v) {
+            const n = parseInt(hex.slice(1), 16);
+            v = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+            hexCache.set(hex, v);
+        }
+        return v;
+    }
+    const toHex = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+    const lerp = (a, b, t) => a + (b - a) * t;
+    function lerpColor(a, b, t) {
+        if (a === b || t <= 0) return a;
+        if (t >= 1) return b;
+        const A = hexToRgb(a), B = hexToRgb(b);
+        return '#' + toHex(lerp(A[0], B[0], t)) + toHex(lerp(A[1], B[1], t)) + toHex(lerp(A[2], B[2], t));
+    }
+    function rgba(hex, a) {
+        const c = hexToRgb(hex);
+        return `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+    }
+
+    /* ------------------------------------------------------------------
+       SCENES (content unchanged; card alphas raised slightly to make up
+       for removing the backdrop blur)
+       ------------------------------------------------------------------ */
+    const SCENES = {
+        sunrise: {
+            sky: ['#78B9BE', '#B8E0DC', '#F9EED8', '#FFE4B5'],
+            glow: ['#FFF3D1', '#FBE7C0', '#B8E0DC'],
+            sunCore: ['#FFE3A8', '#F29A63'],
+            sunHalo: '#FCE3B4',
+            sunPos: { x: 720, y: 430, scale: 1.05 },
+            celestialDotPos: { x: 560, y: 145, opacity: 0.9 },
+            waves: [
+                { top: '#EFF5EC', bot: '#BEDFD9', rim: '#FFFDF8' },
+                { top: '#CFEAE6', bot: '#8FC6CB', rim: '#F7FCFA' },
+                { top: '#98CFD3', bot: '#5DA0B6', rim: '#E0F4F4' },
+                { top: '#67A9BF', bot: '#397AA4', rim: '#B6E1EB' },
+                { top: '#4484AD', bot: '#255C88', rim: '#8DC5E0' },
+                { top: '#2C6592', bot: '#184067', rim: '#6DA9CD' }
+            ],
+            wavePhysics: { ampScale: 0.95, freqScale: 1.0, speedScale: 0.90, cradleLift: 1.0, choppiness: 0.0, baseYOffset: 0 },
+            weather: { rain: 0, sand: 0, bioluminescence: 0, compassOpacity: 0, constellationOpacity: 0 },
+            ui: { textPrimary: '#1A3C5A', textSecondary: '#3B6482', cardBg: 'rgba(251, 249, 244, 0.86)', cardBorder: 'rgba(255, 255, 255, 0.88)', accentBtn: '#28628E', accentBtnText: '#FAF8F5', badgeBg: 'rgba(255, 255, 255, 0.65)' }
+        },
+        storm: {
+            sky: ['#1B2D42', '#2E4863', '#4B6B88', '#6D8EA6'],
+            glow: ['#FCE4B8', '#8AA8BE', '#2E4863'],
+            sunCore: ['#FFF2D6', '#E5B87B'],
+            sunHalo: '#DCE8F0',
+            sunPos: { x: 380, y: 270, scale: 0.72 },
+            celestialDotPos: { x: 920, y: 120, opacity: 0.25 },
+            waves: [
+                { top: '#6D8CA3', bot: '#426078', rim: '#B5CEDE' },
+                { top: '#577891', bot: '#324E66', rim: '#9CBBD0' },
+                { top: '#43647F', bot: '#253F57', rim: '#82A6C0' },
+                { top: '#31516D', bot: '#1A3047', rim: '#6990AE' },
+                { top: '#223E59', bot: '#112236', rim: '#527999' },
+                { top: '#162D46', bot: '#0A1626', rim: '#3D6382' }
+            ],
+            wavePhysics: { ampScale: 1.68, freqScale: 1.25, speedScale: 1.75, cradleLift: 0.45, choppiness: 0.85, baseYOffset: -22 },
+            weather: { rain: 1.0, sand: 0, bioluminescence: 0, compassOpacity: 0, constellationOpacity: 0 },
+            ui: { textPrimary: '#F2F7FA', textSecondary: '#C2D6E6', cardBg: 'rgba(22, 42, 64, 0.84)', cardBorder: 'rgba(165, 200, 228, 0.32)', accentBtn: '#5496C4', accentBtnText: '#FFFFFF', badgeBg: 'rgba(255, 255, 255, 0.12)' }
+        },
+        open_ocean: {
+            sky: ['#3B7396', '#6CA4BE', '#B6D8E2', '#E2F1F4'],
+            glow: ['#FFFFFF', '#D4EEF2', '#6CA4BE'],
+            sunCore: ['#FFFDF7', '#DFEEF2'],
+            sunHalo: '#E6F5F8',
+            sunPos: { x: 720, y: 415, scale: 0.52 },
+            celestialDotPos: { x: 720, y: 120, opacity: 0.6 },
+            waves: [
+                { top: '#9AC8D6', bot: '#659FB5', rim: '#E6F6F9' },
+                { top: '#78B1C4', bot: '#4986A1', rim: '#CBEBF2' },
+                { top: '#5796B0', bot: '#326E8C', rim: '#A8DCE8' },
+                { top: '#3D7B99', bot: '#205675', rim: '#84C6D9' },
+                { top: '#286282', bot: '#133F5C', rim: '#62ACC4' },
+                { top: '#174969', bot: '#0B2A42', rim: '#468FA8' }
+            ],
+            wavePhysics: { ampScale: 0.55, freqScale: 0.62, speedScale: 0.65, cradleLift: 0.0, choppiness: 0.1, baseYOffset: 28 },
+            weather: { rain: 0, sand: 0, bioluminescence: 0.15, compassOpacity: 1.0, constellationOpacity: 0 },
+            ui: { textPrimary: '#13344E', textSecondary: '#2F5978', cardBg: 'rgba(240, 249, 252, 0.86)', cardBorder: 'rgba(255, 255, 255, 0.85)', accentBtn: '#216087', accentBtnText: '#FFFFFF', badgeBg: 'rgba(255, 255, 255, 0.60)' }
+        },
+        desert: {
+            sky: ['#C97A63', '#E5A97C', '#F7D6A8', '#FFF0CC'],
+            glow: ['#FFF8E2', '#FCD9A2', '#E5A97C'],
+            sunCore: ['#FFF7D6', '#F08048'],
+            sunHalo: '#FDE2B2',
+            sunPos: { x: 1020, y: 265, scale: 1.15 },
+            celestialDotPos: { x: 420, y: 140, opacity: 0.7 },
+            waves: [
+                { top: '#F5CFA0', bot: '#D99E6A', rim: '#FFF6E0' },
+                { top: '#EBB882', bot: '#C7834E', rim: '#FDECC9' },
+                { top: '#DF9F66', bot: '#B36B39', rim: '#F9DFB2' },
+                { top: '#CE864E', bot: '#9C5427', rim: '#F2CC96' },
+                { top: '#B86E39', bot: '#823F18', rim: '#E6B57A' },
+                { top: '#9E5627', bot: '#632B0D', rim: '#D49B60' }
+            ],
+            wavePhysics: { ampScale: 1.25, freqScale: 0.78, speedScale: 0.28, cradleLift: 1.35, choppiness: 0.65, baseYOffset: -10 },
+            weather: { rain: 0, sand: 1.0, bioluminescence: 0, compassOpacity: 0, constellationOpacity: 0 },
+            ui: { textPrimary: '#4A210B', textSecondary: '#7A3E1D', cardBg: 'rgba(254, 246, 235, 0.88)', cardBorder: 'rgba(255, 255, 255, 0.85)', accentBtn: '#B55826', accentBtnText: '#FFFDF9', badgeBg: 'rgba(255, 255, 255, 0.62)' }
+        },
+        night: {
+            sky: ['#071120', '#0E223D', '#193C5E', '#27597B'],
+            glow: ['#7CE8FF', '#2B678E', '#0E223D'],
+            sunCore: ['#F7FFFF', '#9BE8FA'],
+            sunHalo: '#88DCF2',
+            sunPos: { x: 1130, y: 215, scale: 0.84 },
+            celestialDotPos: { x: 310, y: 130, opacity: 0.95 },
+            waves: [
+                { top: '#2A6282', bot: '#163B59', rim: '#9BEBF9' },
+                { top: '#225373', bot: '#12304B', rim: '#7CDDF2' },
+                { top: '#1B4463', bot: '#0E253D', rim: '#62CAE5' },
+                { top: '#143652', bot: '#0A1C30', rim: '#4BB4D4' },
+                { top: '#0E2942', bot: '#061322', rim: '#389BBF' },
+                { top: '#091D33', bot: '#030B16', rim: '#2882A6' }
+            ],
+            wavePhysics: { ampScale: 0.78, freqScale: 0.95, speedScale: 0.70, cradleLift: 0.85, choppiness: 0.0, baseYOffset: 38 },
+            weather: { rain: 0, sand: 0, bioluminescence: 1.0, compassOpacity: 0, constellationOpacity: 1.0 },
+            ui: { textPrimary: '#F0F9FF', textSecondary: '#A8CFE6', cardBg: 'rgba(11, 27, 48, 0.86)', cardBorder: 'rgba(124, 232, 255, 0.30)', accentBtn: '#2596B8', accentBtnText: '#FFFFFF', badgeBg: 'rgba(124, 232, 255, 0.14)' }
+        }
+    };
+
+    const BASE_WAVES = [
+        { baseY: 505, amp1: 32, freq1: 0.0028, speed1: 0.42, phase1: 0.5, amp2: 16, freq2: 0.0055, speed2: -0.28, phase2: 1.7, leftLift: 55, rightLift: 90, depth: 0.30, rimW: 3.4, rimA: 0.85, alpha: 0.95 },
+        { baseY: 565, amp1: 40, freq1: 0.0031, speed1: 0.55, phase1: 2.1, amp2: 20, freq2: 0.0062, speed2: 0.35, phase2: 0.8, leftLift: 105, rightLift: 45, depth: 0.44, rimW: 3.2, rimA: 0.80, alpha: 1 },
+        { baseY: 630, amp1: 44, freq1: 0.0026, speed1: -0.62, phase1: 3.4, amp2: 24, freq2: 0.0052, speed2: 0.48, phase2: 2.9, leftLift: 45, rightLift: 130, depth: 0.60, rimW: 3.0, rimA: 0.76, alpha: 1 },
+        { baseY: 695, amp1: 48, freq1: 0.0032, speed1: 0.74, phase1: 1.2, amp2: 25, freq2: 0.0068, speed2: -0.52, phase2: 4.1, leftLift: 135, rightLift: 70, depth: 0.78, rimW: 2.8, rimA: 0.72, alpha: 1 },
+        { baseY: 760, amp1: 46, freq1: 0.0029, speed1: -0.82, phase1: 4.7, amp2: 26, freq2: 0.0058, speed2: 0.60, phase2: 1.5, leftLift: 65, rightLift: 165, depth: 0.96, rimW: 2.6, rimA: 0.68, alpha: 1 },
+        { baseY: 822, amp1: 40, freq1: 0.0034, speed1: 0.92, phase1: 2.8, amp2: 20, freq2: 0.0070, speed2: -0.68, phase2: 0.3, leftLift: 110, rightLift: 85, depth: 1.16, rimW: 2.5, rimA: 0.64, alpha: 1 }
+    ];
+
+    const CONSTELLATION_NODES = [
+        { x: 250, y: 195, r: 9, label: 'Maternal Care Meta-Analysis', type: 'Cochrane Systematic Review', year: '2025 • High Confidence', score: '98%', sample: 'n = 18,400', summary: 'Synthesizes 42 randomized controlled trials evaluating perinatal interventions with high methodological rigor and replicated safety outcomes.' },
+        { x: 450, y: 125, r: 7.5, label: 'Phase III Clinical Trial Registry', type: 'Multi-Center RCT', year: '2024 • Double-Blind', score: '95%', sample: 'n = 6,120', summary: 'Double-blind placebo-controlled trial demonstrating statistically significant improvement across primary patient recovery endpoints.' },
+        { x: 630, y: 215, r: 10, label: 'Evidea Consensus Synthesis', type: 'Core Evidence Hub', year: '2025 • Living Guideline', score: '99%', sample: '128 Peer Studies', summary: 'Central evidence cluster cross-referencing clinical guidelines, conflict-of-interest disclosures, and long-term cohort reproducibility.' },
+        { x: 540, y: 325, r: 7, label: 'Patient-Reported Outcomes', type: 'Longitudinal Cohort', year: '2024 • Real-World Data', score: '92%', sample: 'n = 24,850', summary: 'Tracks quality-of-life improvements, treatment adherence, and lived patient experience across diverse demographic groups.' },
+        { x: 825, y: 145, r: 8.5, label: 'Biomarker Validation Study', type: 'Diagnostic Precision', year: '2025 • Replicated', score: '96%', sample: 'n = 9,300', summary: 'Validates non-invasive biomarker sensitivity and specificity across three independent international laboratory networks.' },
+        { x: 945, y: 275, r: 8, label: 'Global Safety & Efficacy Audit', type: 'Pharmacovigilance Network', year: '2025 • Open Access', score: '97%', sample: 'n = 52,000', summary: 'Comprehensive post-market safety surveillance confirming low adverse-event rates and transparent source funding.' },
+        { x: 340, y: 295, r: 6.5, label: 'Primary Care Clinical Pathway', type: 'Practice Guideline', year: '2024 • Consensus', score: '94%', sample: '38 Medical Boards', summary: 'Translates complex statistical findings into clear, actionable questions patients can bring to their healthcare provider.' }
+    ];
+    const CONSTELLATION_EDGES = [[0, 1], [0, 2], [0, 6], [1, 2], [1, 4], [2, 3], [2, 4], [2, 5], [2, 6], [3, 5], [3, 6], [4, 5]];
+
+    /* ------------------------------------------------------------------
+       STATE
+       ------------------------------------------------------------------ */
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    const FRAME_MS = coarse ? 1000 / 30 : 1000 / 60;   // phones: 30fps is plenty for slow waves
+
+    let selectedNodeIndex = 2;
+    let activeAct2Variant = 'storm';
+    let evideaClarityFactor = 0;
+    let scrollProgress = 0;
+    let userFlowSpeed = 1.0;
+    let userSwellHeight = 1.0;
+    let wavePulseBoost = 0;
+    let targetMouseX = 0, targetMouseY = 0, currentMouseX = 0, currentMouseY = 0;
+    let currentState = blendScenes(SCENES.sunrise, SCENES.sunrise, 0);
+    let appliedUI = null;
+
+    /* ------------------------------------------------------------------
+       SCENE BLENDING
+       ------------------------------------------------------------------ */
+    function blendScenes(a, b, t) {
+        t = Math.max(0, Math.min(1, t));
+        return {
+            sky: a.sky.map((c, i) => lerpColor(c, b.sky[i], t)),
+            glow: a.glow.map((c, i) => lerpColor(c, b.glow[i], t)),
+            sunCore: a.sunCore.map((c, i) => lerpColor(c, b.sunCore[i], t)),
+            sunHalo: lerpColor(a.sunHalo, b.sunHalo, t),
+            sunPos: { x: lerp(a.sunPos.x, b.sunPos.x, t), y: lerp(a.sunPos.y, b.sunPos.y, t), scale: lerp(a.sunPos.scale, b.sunPos.scale, t) },
+            celestialDotPos: { x: lerp(a.celestialDotPos.x, b.celestialDotPos.x, t), y: lerp(a.celestialDotPos.y, b.celestialDotPos.y, t), opacity: lerp(a.celestialDotPos.opacity, b.celestialDotPos.opacity, t) },
+            waves: a.waves.map((w, i) => ({ top: lerpColor(w.top, b.waves[i].top, t), bot: lerpColor(w.bot, b.waves[i].bot, t), rim: lerpColor(w.rim, b.waves[i].rim, t) })),
+            wavePhysics: {
+                ampScale: lerp(a.wavePhysics.ampScale, b.wavePhysics.ampScale, t),
+                freqScale: lerp(a.wavePhysics.freqScale, b.wavePhysics.freqScale, t),
+                speedScale: lerp(a.wavePhysics.speedScale, b.wavePhysics.speedScale, t),
+                cradleLift: lerp(a.wavePhysics.cradleLift, b.wavePhysics.cradleLift, t),
+                choppiness: lerp(a.wavePhysics.choppiness, b.wavePhysics.choppiness, t),
+                baseYOffset: lerp(a.wavePhysics.baseYOffset, b.wavePhysics.baseYOffset, t)
+            },
+            weather: {
+                rain: lerp(a.weather.rain, b.weather.rain, t),
+                sand: lerp(a.weather.sand, b.weather.sand, t),
+                bioluminescence: lerp(a.weather.bioluminescence, b.weather.bioluminescence, t),
+                compassOpacity: lerp(a.weather.compassOpacity, b.weather.compassOpacity, t),
+                constellationOpacity: lerp(a.weather.constellationOpacity, b.weather.constellationOpacity, t)
+            },
+            ui: t < 0.5 ? a.ui : b.ui
+        };
+    }
+
+    function getTargetBlendedScene() {
+        const calmed = blendScenes(SCENES[activeAct2Variant], SCENES.sunrise, evideaClarityFactor * 0.78);
+        return scrollProgress <= 1
+            ? blendScenes(SCENES.sunrise, calmed, scrollProgress)
+            : blendScenes(calmed, SCENES.night, scrollProgress - 1);
+    }
+
+    // UI colors only change at scene boundaries, so only touch CSS variables then
+    function applyUI(ui) {
+        if (ui === appliedUI) return;
+        appliedUI = ui;
+        const s = document.documentElement.style;
+        s.setProperty('--text-primary', ui.textPrimary);
+        s.setProperty('--text-secondary', ui.textSecondary);
+        s.setProperty('--card-bg', ui.cardBg);
+        s.setProperty('--card-border', ui.cardBorder);
+        s.setProperty('--accent-btn', ui.accentBtn);
+        s.setProperty('--accent-btn-text', ui.accentBtnText);
+        s.setProperty('--badge-bg', ui.badgeBg);
+    }
+
+    /* ------------------------------------------------------------------
+       CANVAS SETUP — the 1440x900 artboard is drawn with "slice" fit,
+       like the original SVG. On narrow screens, horizontal positions of
+       the sun, star and constellation are pulled toward the visible centre.
+       ------------------------------------------------------------------ */
+    const cv = document.getElementById('scene-canvas');
+    const g = cv.getContext('2d', { alpha: false });
+    let W = 0, H = 0, DPR = 1, S = 1, OX = 0, OY = 0, visW = 1440, visL = 0, kx = 1;
+    const nodePos = CONSTELLATION_NODES.map(n => ({ x: n.x, y: n.y }));
+
+    function resize() {
+        DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+        W = window.innerWidth; H = window.innerHeight;
+        cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+        S = Math.max(W / 1440, H / 900);
+        OX = (W - 1440 * S) / 2; OY = (H - 900 * S) / 2;
+        visW = Math.min(1440, W / S); visL = 720 - visW / 2;
+        kx = Math.min(1, visW / 1300);
+
+        const narrow = visW < 1100;
+        const tall = H > W;
+        CONSTELLATION_NODES.forEach((n, i) => {
+            const pad = 60;
+            nodePos[i].x = narrow ? visL + pad + ((n.x - 250) / 695) * (visW - pad * 2) : n.x;
+            nodePos[i].y = tall ? 150 + (n.y - 125) * 1.4 : n.y;
+        });
+    }
+    const mapX = (x) => 720 + (x - 720) * kx;
+
+    // Background stars stored in normalised coordinates so they always fill the visible sky
+    const bgStars = Array.from({ length: 65 }, () => ({
+        u: Math.random(), y: Math.random() * 450,
+        r: Math.random() * 1.6 + 0.6, a: Math.random() * 0.65 + 0.2
+    }));
+
+    /* Paper grain: rendered once into a small tile instead of a live full-screen feTurbulence filter */
+    (function makeGrain() {
+        const t = document.createElement('canvas');
+        t.width = t.height = 160;
+        const c = t.getContext('2d');
+        const img = c.createImageData(160, 160);
+        for (let i = 0; i < img.data.length; i += 4) {
+            const v = 120 + Math.random() * 135;
+            img.data[i] = v * 1.0; img.data[i + 1] = v * 0.97; img.data[i + 2] = v * 0.88;
+            img.data[i + 3] = Math.random() * 90;
+        }
+        c.putImageData(img, 0, 0);
+        document.getElementById('paper-grain').style.backgroundImage = `url(${t.toDataURL('image/png')})`;
+    })();
+
+    /* ------------------------------------------------------------------
+       DRAWING
+       ------------------------------------------------------------------ */
+    function drawSky(st) {
+        const sky = g.createLinearGradient(0, 0, 0, 900);
+        sky.addColorStop(0, st.sky[0]); sky.addColorStop(0.44, st.sky[1]);
+        sky.addColorStop(0.78, st.sky[2]); sky.addColorStop(1, st.sky[3]);
+        g.fillStyle = sky;
+        g.fillRect(0, 0, 1440, 900);
+
+        const sx = mapX(st.sunPos.x), sy = st.sunPos.y + 30;
+        const glow = g.createRadialGradient(sx, sy, 0, sx, sy, 880);
+        glow.addColorStop(0, rgba(st.glow[0], 0.88));
+        glow.addColorStop(0.5, rgba(st.glow[1], 0.4));
+        glow.addColorStop(1, rgba(st.glow[2], 0));
+        g.fillStyle = glow;
+        g.fillRect(0, 0, 1440, 900);
+    }
+
+    function drawCelestialDot(st) {
+        const x = mapX(st.celestialDotPos.x) + currentMouseX * 8, y = st.celestialDotPos.y + currentMouseY * 6;
+        g.fillStyle = 'rgba(239,248,248,0.25)';
+        g.beginPath(); g.arc(x, y, 24, 0, Math.PI * 2); g.fill();
+        g.fillStyle = `rgba(239,248,248,${st.celestialDotPos.opacity.toFixed(2)})`;
+        g.beginPath(); g.arc(x, y, 13, 0, Math.PI * 2); g.fill();
+    }
+
+    function drawCompass(op) {
+        if (op < 0.01) return;
+        g.save();
+        g.translate(720, 415);
+        g.globalAlpha = op;
+        g.strokeStyle = 'rgba(224,244,247,0.45)'; g.lineWidth = 1; g.setLineDash([4, 8]);
+        g.beginPath(); g.arc(0, 0, 185, 0, Math.PI * 2); g.stroke();
+        g.setLineDash([]);
+        g.strokeStyle = 'rgba(224,244,247,0.35)'; g.lineWidth = 1.2;
+        g.beginPath(); g.arc(0, 0, 125, 0, Math.PI * 2); g.stroke();
+        g.fillStyle = 'rgba(255,253,247,0.22)';
+        g.beginPath();
+        g.moveTo(0, -150); g.lineTo(8, -18); g.lineTo(140, 0); g.lineTo(8, 18); g.lineTo(0, 150);
+        g.lineTo(-8, 18); g.lineTo(-140, 0); g.lineTo(-8, -18); g.closePath(); g.fill();
+        g.fillStyle = 'rgba(255,253,247,0.8)';
+        g.beginPath(); g.arc(0, 0, 5, 0, Math.PI * 2); g.fill();
+        g.restore();
+    }
+
+    // Breathing halo values (same timings as the original CSS keyframes)
+    function breathe(t, period, delay, sMax, oMin, oMax) {
+        const k = (1 - Math.cos(((t - delay) / period) * Math.PI * 2)) / 2;
+        return [1 + (sMax - 1) * k, oMin + (oMax - oMin) * k];
+    }
+
+    function drawSun(st, t) {
+        g.save();
+        g.translate(mapX(st.sunPos.x) + currentMouseX * 14, st.sunPos.y + currentMouseY * 10);
+        g.scale(st.sunPos.scale, st.sunPos.scale);
+
+        const aura = g.createRadialGradient(0, 0, 0, 0, 0, 310);
+        aura.addColorStop(0, rgba(st.sunHalo, 0.65));
+        aura.addColorStop(0.7, rgba(st.sunHalo, 0.22));
+        aura.addColorStop(1, rgba(st.sunHalo, 0));
+        g.fillStyle = aura;
+        g.beginPath(); g.arc(0, 0, 310, 0, Math.PI * 2); g.fill();
+
+        const m = reducedMotion ? 0 : t;
+        const rings = [
+            [215, breathe(m, 11.5, 2.4, 1.14, 0.20, 0.34)],
+            [152, breathe(m, 9, 1.2, 1.10, 0.36, 0.52)],
+            [100, breathe(m, 6.5, 0, 1.06, 0.56, 0.72)]
+        ];
+        for (const [r, [sc, op]] of rings) {
+            g.fillStyle = rgba(st.sunHalo, op.toFixed(3));
+            g.beginPath(); g.arc(0, 0, r * sc, 0, Math.PI * 2); g.fill();
+        }
+
+        // Soft glow around the core, as a gradient instead of a blur filter
+        const cg = g.createRadialGradient(0, 0, 50, 0, 0, 105);
+        cg.addColorStop(0, rgba(st.sunCore[1], 0.45));
+        cg.addColorStop(1, rgba(st.sunCore[1], 0));
+        g.fillStyle = cg;
+        g.beginPath(); g.arc(0, 0, 105, 0, Math.PI * 2); g.fill();
+
+        const core = g.createLinearGradient(-37, -43, 37, 43);
+        core.addColorStop(0, st.sunCore[0]); core.addColorStop(1, st.sunCore[1]);
+        g.fillStyle = core;
+        g.beginPath(); g.arc(0, 0, 62, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = 'rgba(255,255,255,0.65)'; g.lineWidth = 1.5;
+        g.beginPath(); g.arc(0, 0, 61.5, 0, Math.PI * 2); g.stroke();
+        g.restore();
+    }
+
+    function drawConstellation(op, t) {
+        if (op < 0.01) return;
+        g.save();
+        g.globalAlpha = op;
+
+        // Milky way band: two wide translucent strokes instead of a blurred one
+        g.lineCap = 'round';
+        g.strokeStyle = 'rgba(104,216,248,0.035)';
+        for (const w of [150, 95]) {
+            g.lineWidth = w;
+            g.beginPath(); g.moveTo(-100, 280);
+            g.quadraticCurveTo(380, 120, 760, 220);
+            g.quadraticCurveTo(1140, 320, 1540, 140);
+            g.stroke();
+        }
+
+        g.fillStyle = '#E6F9FF';
+        for (const s of bgStars) {
+            g.globalAlpha = op * 0.75 * s.a;
+            g.beginPath(); g.arc(visL + s.u * visW, s.y, s.r, 0, Math.PI * 2); g.fill();
+        }
+        g.globalAlpha = op;
+
+        // Edges
+        CONSTELLATION_EDGES.forEach(([u, v]) => {
+            const a = nodePos[u], b = nodePos[v];
+            const on = u === selectedNodeIndex || v === selectedNodeIndex;
+            g.setLineDash(on ? [] : [5, 5]);
+            g.lineWidth = on ? 2.5 : 1.2;
+            g.strokeStyle = on ? 'rgba(191,246,255,0.92)' : 'rgba(124,232,255,0.25)';
+            g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+        });
+        g.setLineDash([]);
+
+        const showAllLabels = visW >= 1000;
+        g.font = '600 11.5px "Plus Jakarta Sans", sans-serif';
+        g.textAlign = 'center';
+
+        CONSTELLATION_NODES.forEach((n, i) => {
+            const p = nodePos[i];
+            const sel = i === selectedNodeIndex;
+            const k = reducedMotion ? 0.5 : (1 - Math.cos((t / 4) * Math.PI * 2 + i)) / 2;
+            const haloR = n.r * 2.7 * (1 + 0.38 * k);
+
+            g.fillStyle = `rgba(124,232,255,${((sel ? 0.55 : 0.3) * (0.6 + 0.4 * k)).toFixed(3)})`;
+            g.beginPath(); g.arc(p.x, p.y, haloR, 0, Math.PI * 2); g.fill();
+
+            g.strokeStyle = sel ? 'rgba(255,255,255,0.9)' : 'rgba(166,240,255,0.65)';
+            g.lineWidth = sel ? 2.4 : 1.2;
+            g.beginPath(); g.arc(p.x, p.y, n.r * 1.6, 0, Math.PI * 2); g.stroke();
+
+            const sg = g.createRadialGradient(p.x, p.y, n.r * 0.6, p.x, p.y, n.r * 2.2);
+            sg.addColorStop(0, 'rgba(124,232,255,0.8)'); sg.addColorStop(1, 'rgba(124,232,255,0)');
+            g.fillStyle = sg;
+            g.beginPath(); g.arc(p.x, p.y, n.r * 2.2, 0, Math.PI * 2); g.fill();
+            g.fillStyle = '#FFFFFF';
+            g.beginPath(); g.arc(p.x, p.y, n.r, 0, Math.PI * 2); g.fill();
+
+            if (showAllLabels || sel) {
+                g.fillStyle = 'rgba(230,249,255,0.92)';
+                g.fillText(n.label, Math.max(visL + 90, Math.min(visL + visW - 90, p.x)), p.y - n.r - 12);
+            }
+        });
+        g.restore();
+    }
+
+    const PTS = Array.from({ length: 25 }, () => ({ x: 0, y: 0 }));
+    function traceRidge(pts) {
+        g.moveTo(pts[0].x, pts[0].y);
+        for (let i = 0; i < pts.length - 1; i++) {
+            const c = pts[i], n = pts[i + 1];
+            g.quadraticCurveTo(c.x, c.y, (c.x + n.x) / 2, (c.y + n.y) / 2);
+        }
+        const l = pts[pts.length - 1];
+        g.lineTo(l.x, l.y);
+    }
+
+    function drawWave(i, time, phys, colors) {
+        const base = BASE_WAVES[i];
+        const startX = -160, endX = 1600, segments = 24, step = (endX - startX) / segments;
+        const amp = phys.ampScale * userSwellHeight * (1 + wavePulseBoost * 0.55);
+        let minY = 9999;
+
+        for (let j = 0; j <= segments; j++) {
+            const x = startX + j * step;
+            const nx = Math.max(0, Math.min(1, x / 1440));
+            const left = Math.pow(1 - nx, 2.5) * base.leftLift * phys.cradleLift;
+            const right = Math.pow(nx, 2.5) * base.rightLift * phys.cradleLift;
+            const pa = x * base.freq1 * phys.freqScale + time * base.speed1 + base.phase1;
+            const pb = x * base.freq2 * phys.freqScale + time * base.speed2 + base.phase2;
+            let w1 = Math.sin(pa);
+            if (phys.choppiness > 0.05) {
+                const crest = 1 - Math.abs(Math.sin(pa * 0.75));
+                w1 = lerp(w1, (crest - 0.5) * 2, phys.choppiness * 0.55);
+            }
+            const y = base.baseY + phys.baseYOffset - left - right + (w1 * base.amp1 + Math.cos(pb) * base.amp2) * amp;
+            PTS[j].x = x; PTS[j].y = y;
+            if (y < minY) minY = y;
+        }
+
+        g.save();
+        g.translate(-currentMouseX * 38 * base.depth, -currentMouseY * 20 * base.depth);
+
+        // Paper-cut elevation: a soft dark band just above the ridge, drawn as two wide
+        // translucent strokes that the fill then covers on its lower half
+        g.save();
+        g.translate(0, -7);
+        g.lineJoin = 'round';
+        g.strokeStyle = 'rgba(13,43,69,0.05)'; g.lineWidth = 30;
+        g.beginPath(); traceRidge(PTS); g.stroke();
+        g.strokeStyle = 'rgba(13,43,69,0.06)'; g.lineWidth = 14;
+        g.beginPath(); traceRidge(PTS); g.stroke();
+        g.restore();
+
+        const grad = g.createLinearGradient(0, minY, 0, 1050);
+        grad.addColorStop(0, colors.top); grad.addColorStop(1, colors.bot);
+        g.globalAlpha = base.alpha;
+        g.fillStyle = grad;
+        g.beginPath(); traceRidge(PTS); g.lineTo(endX, 1100); g.lineTo(startX, 1100); g.closePath(); g.fill();
+
+        g.globalAlpha = base.rimA;
+        g.strokeStyle = colors.rim; g.lineWidth = base.rimW; g.lineCap = 'round';
+        g.beginPath(); traceRidge(PTS); g.stroke();
+        g.restore();
+    }
+
+    /* Weather particles, drawn in screen pixels on the same canvas */
+    const particles = Array.from({ length: coarse ? 70 : 110 }, () => ({
+        x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight,
+        len: Math.random() * 24 + 14, speed: Math.random() * 9 + 11,
+        size: Math.random() * 2.4 + 1.0, alpha: Math.random() * 0.55 + 0.15,
+        phase: Math.random() * Math.PI * 2
+    }));
+
+    function drawWeather(ws, time, step) {
+        if (reducedMotion) return;
+        const w = W, h = H, f = userFlowSpeed * step;
+
+        if (ws.rain > 0.02) {
+            // One path for all streaks instead of one stroke call per drop
+            g.strokeStyle = `rgba(205,232,248,${(0.38 * ws.rain).toFixed(3)})`;
+            g.lineWidth = 1.35; g.lineCap = 'round';
+            g.beginPath();
+            for (const p of particles) {
+                g.moveTo(p.x, p.y); g.lineTo(p.x - p.len * 0.32, p.y + p.len);
+                p.x -= p.speed * 0.30 * f; p.y += p.speed * 1.15 * f;
+                if (p.y > h + 30) { p.y = -25; p.x = Math.random() * (w + 200); }
+                if (p.x < -50) p.x = w + 50;
+            }
+            g.stroke();
+        }
+
+        if (ws.sand > 0.02) {
+            g.fillStyle = 'rgb(255,240,210)';
+            for (let i = 0; i < Math.min(75, particles.length); i++) {
+                const p = particles[i];
+                g.globalAlpha = p.alpha * ws.sand * 0.75;
+                const s = p.size * 1.6;
+                g.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+                p.x += (p.speed * 0.45 + 2) * f; p.y += Math.sin(time * 2 + p.phase) * 0.8 * step;
+                if (p.x > w + 20) { p.x = -20; p.y = Math.random() * h; }
+            }
+            g.globalAlpha = 1;
+        }
+
+        if (ws.bioluminescence > 0.02) {
+            g.fillStyle = 'rgb(130,238,255)';
+            for (let i = 0; i < Math.min(55, particles.length); i++) {
+                const p = particles[i];
+                g.globalAlpha = ((Math.sin(time * 2.2 + p.phase) + 1) * 0.5) * 0.55 * ws.bioluminescence;
+                g.beginPath(); g.arc(p.x, p.y, p.size * 1.15, 0, Math.PI * 2); g.fill();
+                p.y -= 0.35 * f; p.x += Math.cos(time + p.phase) * 0.35 * step;
+                if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w; }
+            }
+            g.globalAlpha = 1;
+        }
+    }
+
+    /* ------------------------------------------------------------------
+       MAIN LOOP (frame-capped; the browser pauses it in background tabs)
+       ------------------------------------------------------------------ */
+    let simTime = 0, lastFrame = performance.now(), lastDraw = 0;
+
+    function frame(now) {
+        requestAnimationFrame(frame);
+        if (now - lastDraw < FRAME_MS - 2) return;
+        const dt = Math.min((now - lastFrame) / 1000, 0.1);
+        lastFrame = now; lastDraw = now;
+        const step = dt * 60; // particle speeds were tuned per 60fps frame
+
+        const target = getTargetBlendedScene();
+        currentState = blendScenes(currentState, target, 1 - Math.pow(0.92, step));
+        applyUI(target.ui);
+
+        const motion = reducedMotion ? 0.15 : 1;
+        simTime += dt * (currentState.wavePhysics.speedScale * userFlowSpeed + wavePulseBoost * 1.6) * motion;
+        wavePulseBoost = wavePulseBoost > 0.002 ? wavePulseBoost * Math.pow(0.95, step) : 0;
+
+        currentMouseX += (targetMouseX - currentMouseX) * 0.06 * step;
+        currentMouseY += (targetMouseY - currentMouseY) * 0.06 * step;
+
+        const t = now / 1000;
+        g.setTransform(S * DPR, 0, 0, S * DPR, OX * DPR, OY * DPR);
+        drawSky(currentState);
+        drawCelestialDot(currentState);
+        drawCompass(currentState.weather.compassOpacity);
+        drawSun(currentState, t);
+        drawConstellation(currentState.weather.constellationOpacity, t);
+        for (let i = 0; i < 6; i++) drawWave(i, simTime, currentState.wavePhysics, currentState.waves[i]);
+
+        g.setTransform(DPR, 0, 0, DPR, 0, 0);
+        drawWeather(currentState.weather, simTime, step);
+    }
+
+    /* ------------------------------------------------------------------
+       CONSTELLATION SELECTION (canvas hit-testing)
+       ------------------------------------------------------------------ */
+    function selectConstellationNode(index) {
+        const node = CONSTELLATION_NODES[index];
+        if (!node) return;
+        if (index === selectedNodeIndex && document.getElementById('inspector-title').textContent === node.label) return;
+        selectedNodeIndex = index;
+        document.getElementById('inspector-type').textContent = node.type;
+        document.getElementById('inspector-year').textContent = node.year;
+        document.getElementById('inspector-title').textContent = node.label;
+        document.getElementById('inspector-score').textContent = node.score;
+        document.getElementById('inspector-summary').textContent = node.summary;
+        document.getElementById('inspector-sample').textContent = node.sample;
+        const links = CONSTELLATION_EDGES.filter(([u, v]) => u === index || v === index).length;
+        document.getElementById('inspector-links').textContent = `${links} Direct Citations`;
+        wavePulseBoost = Math.max(wavePulseBoost, 0.45);
+    }
+
+    function nodeAt(clientX, clientY) {
+        if (currentState.weather.constellationOpacity < 0.45) return -1;
+        const vx = (clientX - OX) / S, vy = (clientY - OY) / S;
+        const minR = 22 / S;
+        let best = -1, bestD = Infinity;
+        CONSTELLATION_NODES.forEach((n, i) => {
+            const d = Math.hypot(nodePos[i].x - vx, nodePos[i].y - vy);
+            if (d < Math.max(n.r * 2.7, minR) && d < bestD) { best = i; bestD = d; }
+        });
+        return best;
+    }
+    const overUI = (el) => !!(el && el.closest && el.closest('button, input, a, label, .glass-panel, #bottom-dock, #top-nav'));
+
+    window.addEventListener('pointermove', (e) => {
+        if (e.pointerType === 'mouse') {
+            targetMouseX = (e.clientX / W - 0.5) * 2;
+            targetMouseY = (e.clientY / H - 0.5) * 2;
+            const i = overUI(e.target) ? -1 : nodeAt(e.clientX, e.clientY);
+            document.body.style.cursor = i >= 0 ? 'pointer' : '';
+            if (i >= 0) selectConstellationNode(i);
+        }
+    }, { passive: true });
+    window.addEventListener('click', (e) => {
+        if (overUI(e.target)) return;
+        const i = nodeAt(e.clientX, e.clientY);
+        if (i >= 0) selectConstellationNode(i);
+    });
+    window.addEventListener('touchmove', (e) => {
+        if (e.touches.length) {
+            targetMouseX = (e.touches[0].clientX / W - 0.5) * 2 * 0.5;
+            targetMouseY = (e.touches[0].clientY / H - 0.5) * 2 * 0.5;
+        }
+    }, { passive: true });
+
+    /* ------------------------------------------------------------------
+       NAVIGATION + CONTROLS
+       ------------------------------------------------------------------ */
+    const sc = document.getElementById('story-scroll-container');
+    const sections = [0, 1, 2].map(i => document.getElementById(`section-act-${i}`));
+
+    function styleActive(btn, on) {
+        btn.style.backgroundColor = on ? 'var(--accent-btn)' : 'transparent';
+        btn.style.color = on ? 'var(--accent-btn-text)' : 'var(--text-primary)';
+    }
+
+    let lastActiveAct = -1;
+    function onScroll() {
+        const st = sc.scrollTop;
+        const tops = sections.map(s => s.offsetTop);
+        let p = 2;
+        for (let i = 0; i < 2; i++) {
+            if (st < tops[i + 1]) { p = i + Math.max(0, (st - tops[i]) / (tops[i + 1] - tops[i])); break; }
+        }
+        scrollProgress = Math.max(0, Math.min(2, p));
+
+        const act = Math.round(scrollProgress);
+        if (act !== lastActiveAct) {
+            lastActiveAct = act;
+            [0, 1, 2].forEach(i => { const b = document.getElementById(`nav-act-${i}`); if (b) styleActive(b, i === act); });
+            updateDockHighlight(act === 0 ? 'sunrise' : act === 1 ? activeAct2Variant : 'night');
+        }
+    }
+    sc.addEventListener('scroll', onScroll, { passive: true });
+
+    function scrollToAct(i) {
+        sc.scrollTo({ top: sections[i].offsetTop, behavior: reducedMotion ? 'auto' : 'smooth' });
+    }
+
+    const ACT2_COPY = {
+        storm: [
+            `You shouldn't feel caught in a <span class="italic font-normal">storm</span> of conflicting claims.`,
+            `Searching for healthcare answers online often feels like turbulent seas—contradictory articles, hidden biases, and overwhelming noise. Evidea acts as a warm guiding beacon that calms the waters and filters out low-credibility sources.`
+        ],
+        open_ocean: [
+            `Adrift in an <span class="italic font-normal">endless ocean</span> with no land in sight.`,
+            `Millions of medical papers exist, yet patients often feel completely alone on an open horizon without a compass. Evidea provides immediate orientation so you always know where reliable evidence stands.`
+        ],
+        desert: [
+            `Wandering a vast <span class="italic font-normal">desert</span> in search of clear answers.`,
+            `For rare or under-researched conditions, finding accessible, high-credibility clinical data can feel like crossing shifting sand dunes. Evidea brings oasis-like clarity by surfacing verified trials and global consensus.`
+        ]
+    };
+
+    function selectAct2Variant(key) {
+        activeAct2Variant = key;
+        document.getElementById('act2-heading').innerHTML = ACT2_COPY[key][0];
+        document.getElementById('act2-description').textContent = ACT2_COPY[key][1];
+        ['storm', 'open_ocean', 'desert'].forEach(k => {
+            const b = document.getElementById(`btn-variant-${k}`);
+            const on = k === key;
+            b.style.backgroundColor = on ? 'var(--accent-btn)' : 'var(--badge-bg)';
+            b.style.color = on ? 'var(--accent-btn-text)' : 'var(--text-primary)';
+            b.style.borderColor = on ? 'transparent' : 'var(--card-border)';
+        });
+        updateDockHighlight(key);
+        triggerWavePulse();
+    }
+
+    function selectSceneDirect(key) {
+        if (key === 'sunrise') scrollToAct(0);
+        else if (key === 'night') scrollToAct(2);
+        else { selectAct2Variant(key); scrollToAct(1); }
+        updateDockHighlight(key);
+    }
+
+    function updateDockHighlight(active) {
+        ['sunrise', 'storm', 'open_ocean', 'desert', 'night'].forEach(k => {
+            const b = document.getElementById(`dock-btn-${k}`);
+            if (!b) return;
+            styleActive(b, k === active);
+            if (k === active && b.scrollIntoView && b.parentElement.scrollWidth > b.parentElement.clientWidth) {
+                b.parentElement.scrollTo({ left: b.offsetLeft - 8, behavior: 'smooth' });
+            }
+        });
+    }
+
+    document.getElementById('clarity-slider').addEventListener('input', (e) => {
+        evideaClarityFactor = parseFloat(e.target.value);
+        const pct = Math.round(evideaClarityFactor * 100);
+        document.getElementById('clarity-percent-badge').textContent = pct === 0 ? '0% Raw Noise' : `${pct}% Evidea Clarity`;
+    });
+    document.getElementById('ctrl-flow').addEventListener('input', (e) => { userFlowSpeed = parseFloat(e.target.value); });
+    document.getElementById('ctrl-relief').addEventListener('input', (e) => { userSwellHeight = parseFloat(e.target.value); });
+    document.getElementById('ctrl-grain').addEventListener('input', (e) => { document.getElementById('paper-grain').style.opacity = e.target.value; });
+
+    function triggerWavePulse() { wavePulseBoost = 1.3; }
+
+    let currentCanvasMode = 'story', isZenFullscreen = false;
+    function setCanvasViewMode(mode) {
+        currentCanvasMode = mode;
+        const pure = mode === 'pure';
+        sc.classList.toggle('opacity-0', pure);
+        sc.classList.toggle('pointer-events-none', pure);
+        styleActive(document.getElementById('btn-pure-canvas'), pure);
+        styleActive(document.getElementById('btn-story-ui'), !pure);
+    }
+
+    function toggleZenFullscreen() {
+        isZenFullscreen = !isZenFullscreen;
+        const z = isZenFullscreen;
+        document.getElementById('top-nav').classList.toggle('opacity-0', z);
+        document.getElementById('top-nav').classList.toggle('pointer-events-none', z);
+        document.getElementById('top-nav').classList.toggle('-translate-y-6', z);
+        document.getElementById('bottom-dock').classList.toggle('opacity-0', z);
+        document.getElementById('bottom-dock').classList.toggle('pointer-events-none', z);
+        const restore = document.getElementById('restore-zen-btn');
+        restore.classList.toggle('opacity-0', !z);
+        restore.classList.toggle('pointer-events-none', !z);
+        restore.classList.toggle('translate-y-4', !z);
+        const hideStory = z || currentCanvasMode === 'pure';
+        sc.classList.toggle('opacity-0', hideStory);
+        sc.classList.toggle('pointer-events-none', hideStory);
+    }
+
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isZenFullscreen) toggleZenFullscreen(); });
+
+    // Expose handlers used by inline onclick attributes
+    Object.assign(window, {
+        scrollToAct, selectAct2Variant, selectSceneDirect, setCanvasViewMode, toggleZenFullscreen,
+        triggerWavePulse, highlightRandomConstellationNode: () => selectConstellationNode((selectedNodeIndex + 1) % CONSTELLATION_NODES.length)
+    });
+
+    let resizeRaf = 0;
+    window.addEventListener('resize', () => {
+        cancelAnimationFrame(resizeRaf);
+        resizeRaf = requestAnimationFrame(() => { resize(); onScroll(); });
+    });
+
+    resize();
+    selectedNodeIndex = -1;
+    selectConstellationNode(2);
+    applyUI(SCENES.sunrise.ui);
+    onScroll();
+    requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
